@@ -67,7 +67,9 @@ body {
   border-bottom: 2px solid var(--accent);
 }
 .topbar-brand { display: flex; align-items: center; gap: 12px; }
-.logo { width: 42px; height: 42px; }
+/* Logo is the DragonForge icon (256x158, ~1.6:1). Set height and let
+   width scale so the dragon never gets squished. */
+.logo { height: 40px; width: auto; display: block; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-name {
   font-weight: 700; letter-spacing: 0.14em; font-size: 0.95rem;
@@ -303,7 +305,7 @@ input:focus, select:focus, textarea:focus {
   text-align: center;
   box-shadow: 0 12px 40px rgba(0,0,0,0.5);
 }
-.login-logo { width: 64px; height: 64px; margin-bottom: 10px; }
+.login-logo { height: 70px; width: auto; margin-bottom: 10px; }
 .login-title {
   font-size: 1.3rem; font-weight: 700; letter-spacing: 0.08em;
 }
@@ -376,7 +378,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center; gap: 16px; margin-bottom: 14px;
 }
 .report-brand { display: flex; align-items: center; gap: 14px; }
-.report-logo { width: 52px; height: 52px; }
+.report-logo { height: 50px; width: auto; }
 .report-title { font-size: 1.3rem; font-weight: 700; }
 .report-meta { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-soft); }
 .report-filters {
@@ -398,7 +400,7 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.76rem;
   border-top: 2px solid var(--accent);
 }
-.foot-logo { width: 22px; height: 22px; opacity: 0.85; }
+.foot-logo { height: 22px; width: auto; opacity: 0.85; }
 
 /* ---- Responsive -------------------------------------------- */
 @media (max-width: 720px) {
