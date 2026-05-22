@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ item['item_code'] }}{% endblock %}
+{% block content %}
+<div class="detail-head">
+  <div>
+    <h1 class="page-title mono">{{ item['item_code'] }}</h1>
+    <p class="detail-name">{{ item['name'] }}</p>
+  </div>
+  <span class="pill pill-{{ item['status']|lower|replace(' ', '-') }} pill-lg">
+    {{ item['status'] }}
+  </span>
+</div>
+
+<section class="panel">
+  <h2 class="panel-title">Details</h2>
+  <dl class="detail-list">
+    <dt>Category</dt><dd>{{ item['category_name'] }}</dd>
+    <dt>Location</dt><dd>{{ item['location'] or '—' }}</dd>
+    <dt>Checkout limit</dt>
+    <dd>{% if item['checkout_limit'] %}
+          {{ item['checkout_limit'] }} per student (this category)
+        {% else %}No limit{% endif %}</dd>
+    <dt>Notes</dt><dd>{{ item['notes'] or '—' }}</dd>
+    <dt>Added</dt><dd>{{ item['created_at'][:10] }}</dd>
+  </dl>
+
+  {% if current_role in ('admin', 'manager') %}
+  <div class="action-row">
+    <a href="{{ url_for('item_edit', item_id=item['id']) }}"
+       class="btn btn-primary">Edit</a>
+    <form method="post"
+          action="{{ url_for('item_delete', item_id=item['id']) }}"
+          onsubmit="return confirm('Delete {{ item['item_code'] }}? This cannot be undone.');">
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2 class="panel-title">Checkout History</h2>
+  {% if history %}
+  <table class="data-table">
+    <thead>
+      <tr><th>Student</th><th>Out</th><th>Due</th><th>Returned</th>
+          <th>State</th></tr>
+    </thead>
+    <tbody>
+    {% for h in history %}
+      <tr>
+        <td>{{ h['student_name'] }}
+            <span class="mono dim">({{ h['employee_id'] }})</span></td>
+        <td>{{ h['checkout_at'][:16]|replace('T', ' ') }}</td>
+        <td>{{ h['due_at'][:10] }}</td>
+        <td>{{ h['return_at'][:16]|replace('T', ' ') if h['return_at'] else '—' }}</td>
+        <td>
+          {% if h['return_at'] %}
+            <span class="pill pill-available">Returned</span>
+          {% elif is_overdue(h['due_at'], h['return_at']) %}
+            <span class="pill pill-retired-lost">Overdue</span>
+          {% else %}
+            <span class="pill pill-checked-out">Out</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-note">This asset has never been checked out.</p>
+  {% endif %}
+</section>
+{% endblock %}

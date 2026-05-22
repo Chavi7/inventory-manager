@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1 class="page-title">Operations Dashboard</h1>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <span class="stat-num">{{ total_assets }}</span>
+    <span class="stat-label">Total Assets</span>
+  </div>
+  <div class="stat-card stat-ok">
+    <span class="stat-num">{{ available }}</span>
+    <span class="stat-label">Available</span>
+  </div>
+  <div class="stat-card stat-out">
+    <span class="stat-num">{{ checked_out }}</span>
+    <span class="stat-label">Checked Out</span>
+  </div>
+  <div class="stat-card stat-repair">
+    <span class="stat-num">{{ in_repair }}</span>
+    <span class="stat-label">In Repair</span>
+  </div>
+</div>
+
+{% if overdue %}
+<section class="panel panel-alert">
+  <h2 class="panel-title">&#9888; Overdue Items ({{ overdue|length }})</h2>
+  <table class="data-table">
+    <thead><tr><th>Asset</th><th>Item</th><th>Student</th><th>Due</th></tr></thead>
+    <tbody>
+    {% for r in overdue %}
+      <tr>
+        <td><a class="mono" href="{{ url_for('item_detail', item_id=r['item_id']) }}">{{ r['item_code'] }}</a></td>
+        <td>{{ r['item_name'] }}</td>
+        <td>{{ r['student_name'] }} <span class="mono dim">({{ r['employee_id'] }})</span></td>
+        <td class="overdue-text">{{ r['due_at'][:10] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if low_stock %}
+<section class="panel panel-warn">
+  <h2 class="panel-title">&#9888; Low Stock ({{ low_stock|length }})</h2>
+  <table class="data-table">
+    <thead><tr><th>Code</th><th>Item</th><th>On Hand</th><th>Threshold</th></tr></thead>
+    <tbody>
+    {% for r in low_stock %}
+      <tr>
+        <td class="mono">{{ r['item_code'] }}</td>
+        <td>{{ r['name'] }}</td>
+        <td>{{ r['quantity_on_hand'] }}</td>
+        <td>{{ r['low_stock_threshold'] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2 class="panel-title">Currently Checked Out ({{ open_rows|length }})</h2>
+  {% if open_rows %}
+  <table class="data-table">
+    <thead><tr><th>Asset</th><th>Item</th><th>Student</th><th>Out</th><th>Due</th></tr></thead>
+    <tbody>
+    {% for r in open_rows %}
+      <tr>
+        <td><a class="mono" href="{{ url_for('item_detail', item_id=r['item_id']) }}">{{ r['item_code'] }}</a></td>
+        <td>{{ r['item_name'] }}</td>
+        <td>{{ r['student_name'] }} <span class="mono dim">({{ r['employee_id'] }})</span></td>
+        <td>{{ r['checkout_at'][:10] }}</td>
+        <td>{{ r['due_at'][:10] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-note">Nothing is checked out right now.</p>
+  {% endif %}
+</section>
+{% endblock %}

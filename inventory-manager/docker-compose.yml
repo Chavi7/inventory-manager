@@ -1,0 +1,20 @@
+# Dragon Technologies Inventory Manager - Module 2
+# Deploy as a stack in Portainer.
+services:
+  inventory:
+    build: .
+    container_name: inventory-manager
+    ports:
+      # host:container — change the host port if 5001 is in use.
+      - "5001:5000"
+    volumes:
+      # Persists the SQLite database across container rebuilds.
+      - inventory-data:/data
+    environment:
+      # IMPORTANT: set a long random value before deploying.
+      - INVENTORY_SECRET_KEY=change-this-to-a-long-random-string
+      - INVENTORY_DB_PATH=/data/inventory.db
+    restart: unless-stopped
+
+volumes:
+  inventory-data:

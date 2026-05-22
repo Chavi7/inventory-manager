@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Categories{% endblock %}
+{% block content %}
+<h1 class="page-title">Categories</h1>
+
+<section class="panel panel-form">
+  <h2 class="panel-title">Add Category</h2>
+  <form method="post" class="inline-form">
+    <div>
+      <label for="name">Name <span class="req">*</span></label>
+      <input type="text" id="name" name="name" required>
+    </div>
+    <div>
+      <label for="prefix">Prefix <span class="req">*</span></label>
+      <input type="text" id="prefix" name="prefix" maxlength="4"
+             placeholder="2–4 letters" required>
+    </div>
+    <div>
+      <label for="checkout_limit">Checkout limit</label>
+      <input type="number" id="checkout_limit" name="checkout_limit"
+             min="1" placeholder="blank = none">
+    </div>
+    <button type="submit" class="btn btn-primary">Add</button>
+  </form>
+  <p class="field-hint">The prefix builds asset codes, e.g. prefix
+     <span class="mono">LAP</span> &rarr; <span class="mono">DT-LAP-001</span>.
+     The limit caps how many items in this category a student may hold
+     at once.</p>
+</section>
+
+<section class="panel">
+  <h2 class="panel-title">All Categories</h2>
+  <table class="data-table">
+    <thead>
+      <tr><th>Name</th><th>Prefix</th><th>Items</th>
+          <th>Checkout limit</th><th>Next #</th></tr>
+    </thead>
+    <tbody>
+    {% for c in categories %}
+      <tr>
+        <td>{{ c['name'] }}</td>
+        <td class="mono">{{ c['prefix'] }}</td>
+        <td>{{ c['item_count'] }}</td>
+        <td>
+          <form method="post"
+                action="{{ url_for('category_update', cat_id=c['id']) }}"
+                class="mini-form">
+            <input type="number" name="checkout_limit" min="1"
+                   value="{{ c['checkout_limit'] if c['checkout_limit'] }}"
+                   placeholder="none">
+            <button type="submit" class="btn btn-ghost btn-sm">Save</button>
+          </form>
+        </td>
+        <td class="mono dim">{{ c['next_number'] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

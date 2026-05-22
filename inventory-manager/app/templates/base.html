@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Inventory Manager{% endblock %} &middot; Dragon Technologies</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="{{ url_for('static', filename='img/dragon-logo.svg') }}"
+         alt="Dragon Technologies" class="logo">
+    <div class="brand-text">
+      <span class="brand-name">DRAGON TECHNOLOGIES</span>
+      <span class="brand-sub">CTEC / INVENTORY MANAGER</span>
+    </div>
+  </div>
+  {% if current_user %}
+  <div class="topbar-user">
+    <span class="user-name">{{ current_user }}</span>
+    <span class="role-badge role-{{ current_role }}">{{ current_role }}</span>
+    <a class="btn-logout" href="{{ url_for('logout') }}">Log out</a>
+  </div>
+  {% endif %}
+</header>
+
+{% if current_user %}
+<nav class="mainnav">
+  <a href="{{ url_for('dashboard') }}">Dashboard</a>
+  <a href="{{ url_for('inventory') }}">Inventory</a>
+  <a href="{{ url_for('scan_station') }}">Scan Station</a>
+  <a href="{{ url_for('report_history') }}">History Report</a>
+  {% if current_role in ('admin', 'manager') %}
+    <a href="{{ url_for('item_new') }}">Add Asset</a>
+  {% endif %}
+  {% if current_role == 'admin' %}
+    <a href="{{ url_for('categories') }}">Categories</a>
+    <a href="{{ url_for('roster') }}">Roster</a>
+    <a href="{{ url_for('users') }}">Users</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+<main class="content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-area">
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footbar">
+  <img src="{{ url_for('static', filename='img/dragon-logo.svg') }}"
+       alt="" class="foot-logo">
+  <span>Dragon Technologies &middot; Inventory Manager &middot;
+        Module 2 &copy; {{ now_year }} CTEC</span>
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

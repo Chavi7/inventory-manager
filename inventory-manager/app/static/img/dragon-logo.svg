@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img"
+     aria-label="Dragon Technologies">
+  <defs>
+    <linearGradient id="dt-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6FB4FF"/>
+      <stop offset="1" stop-color="#2C7BE0"/>
+    </linearGradient>
+  </defs>
+  <!-- circuit ring -->
+  <circle cx="32" cy="32" r="29" fill="none" stroke="#1B2436"
+          stroke-width="3"/>
+  <circle cx="32" cy="32" r="29" fill="none" stroke="url(#dt-g)"
+          stroke-width="1.5" stroke-dasharray="3 4"/>
+  <!-- circuit nodes -->
+  <circle cx="32" cy="3"  r="2.4" fill="#4A9EFF"/>
+  <circle cx="61" cy="32" r="2.4" fill="#4A9EFF"/>
+  <circle cx="32" cy="61" r="2.4" fill="#4A9EFF"/>
+  <circle cx="3"  cy="32" r="2.4" fill="#4A9EFF"/>
+  <!-- stylised dragon head: angular, circuit-like -->
+  <g fill="url(#dt-g)" stroke="#0A0F1A" stroke-width="0.6">
+    <path d="M20 40 L20 24 L30 16 L34 22 L44 20 L48 26 L42 30 L48 34
+             L44 40 L36 36 L32 44 L26 38 Z"/>
+  </g>
+  <!-- eye -->
+  <circle cx="36" cy="26" r="2.6" fill="#0A0F1A"/>
+  <circle cx="36.8" cy="25.2" r="0.9" fill="#6FB4FF"/>
+  <!-- circuit traces from snout -->
+  <path d="M44 20 L52 18 M48 26 L56 26 M44 40 L52 44"
+        stroke="#4A9EFF" stroke-width="1.6" fill="none"
+        stroke-linecap="round"/>
+  <circle cx="52" cy="18" r="1.6" fill="#6FB4FF"/>
+  <circle cx="56" cy="26" r="1.6" fill="#6FB4FF"/>
+  <circle cx="52" cy="44" r="1.6" fill="#6FB4FF"/>
+</svg>
