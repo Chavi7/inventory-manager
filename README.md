@@ -10,9 +10,10 @@ check items in and out as if they were managing a real IT company's stockroom.
 > time clock. The two apps are independent but share one key — the
 > `employee_id` printed on each student's CLOCKIN badge.
 
-<!-- SCREENSHOT: the Operations Dashboard with a few sample assets and one
-     checked-out item. Use fictional student names only. -->
-*(Screenshot: Operations Dashboard — to be added.)*
+![Operations Dashboard](docs/dashboard.png)
+
+*The Operations Dashboard — asset counts, and a live list of what's currently
+checked out. (Sample data — all student names are fictional.)*
 
 ---
 
@@ -243,9 +244,10 @@ The Inventory page lists all assets and can be searched by name or code and
 filtered by category and status. Each asset has a detail page showing its full
 information and its complete check-out history.
 
-<!-- SCREENSHOT: the Inventory list page showing several sample assets across
-     different categories and statuses. -->
-*(Screenshot: Inventory list — to be added.)*
+![Asset Inventory](docs/inventory.png)
+
+*The Asset Inventory list — searchable and filterable, with each asset's
+auto-generated code and status pill. (Sample data.)*
 
 ---
 
@@ -270,9 +272,11 @@ If a scan does not work the station says why, distinguishing three cases: the
 code is not a valid CLOCKIN badge, the badge is valid but the student is not in
 the inventory roster yet, or the student account is inactive.
 
-<!-- SCREENSHOT: the Scan Station screen mid-session — a sample student loaded
-     and a sample asset scanned, ready to check out. Fictional names only. -->
-*(Screenshot: Scan Station — to be added.)*
+![Scan Station](docs/scan-station.png)
+
+*The Scan Station — the camera view on the left, the current check-out session
+on the right. A student badge scan fills the Student slot; an asset scan fills
+the Asset slot.*
 
 > **Note on QR codes:** the scan station reads two kinds of codes — CLOCKIN
 > student badges (already printed by CLOCKIN) and asset codes. This version
@@ -308,9 +312,10 @@ show everything, only items currently out, or only overdue items, and it has a
 print-friendly layout with the Dragon Technologies logo for a paper copy. The
 same data can also be downloaded as a CSV.
 
-<!-- SCREENSHOT: the History Report, filtered view, with sample check-out rows.
-     Fictional names only. -->
-*(Screenshot: Check-out History Report — to be added.)*
+![Check-out History Report](docs/history-report.png)
+
+*The Check-out History Report — every check-out event, filterable and
+print-ready. (Sample data — fictional students.)*
 
 ---
 
