@@ -82,7 +82,7 @@ It builds the app straight from this GitHub repository.
 3. Under **Build method**, choose **Repository**.
 4. **Repository URL:** `https://github.com/Chavi7/inventory-manager`
 5. **Repository reference:** `refs/heads/main`
-6. **Compose path:** `docker-compose.yml`
+6. **Compose path:** `compose.yml`
 7. Before deploying, open the **Environment variables** section (or edit the
    compose file in the editor) and set a real value for
    `INVENTORY_SECRET_KEY` — a long random string. Do not leave the placeholder.
@@ -121,7 +121,7 @@ git clone https://github.com/Chavi7/inventory-manager.git
 cd inventory-manager
 ```
 
-Open `docker-compose.yml` and set a real `INVENTORY_SECRET_KEY`. Then:
+Open `compose.yml` and set a real `INVENTORY_SECRET_KEY`. Then:
 
 ```bash
 docker compose up -d --build
@@ -138,7 +138,7 @@ volume (`inventory-data`) so it survives container rebuilds.
 inventory-manager/
 ├── README.md
 ├── Dockerfile               # builds the app image (Python 3.12 slim + gunicorn)
-├── docker-compose.yml       # Portainer / Compose stack definition
+├── compose.yml       # Portainer / Compose stack definition
 ├── requirements.txt         # Python dependencies: Flask, bcrypt, gunicorn
 ├── .gitignore
 └── app/
@@ -341,7 +341,7 @@ are updated in place; new rows are added.
 
 - Passwords are hashed with **bcrypt**. Plain passwords are never stored.
 - `INVENTORY_SECRET_KEY` signs login sessions. On any real deployment, set it
-  to a long random value. The placeholder in `docker-compose.yml` must be
+  to a long random value. The placeholder in `compose.yml` must be
   changed before deploying.
 - The seeded `admin` / `dragon-admin` account is a convenience for first login
   only. Change that password immediately on a real deployment.
@@ -380,7 +380,7 @@ Keep backups somewhere private — the file contains your roster.
 
 ## Docker reference commands
 
-Run these from the project folder (the one with `docker-compose.yml`).
+Run these from the project folder (the one with `compose.yml`).
 
 | Task                        | Command                                  |
 |-----------------------------|------------------------------------------|
