@@ -1,0 +1,27 @@
+# Keep these out of the Docker build context.
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local database — the container creates its own in the mounted volume
+app/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Docs / screenshots — not needed inside the running container
+docs/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
