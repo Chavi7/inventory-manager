@@ -29,6 +29,7 @@ checked out. (Sample data — all student names are fictional.)*
 - [Categories and item codes](#categories-and-item-codes)
 - [Item management](#item-management)
 - [The scan station — check-out and return](#the-scan-station--check-out-and-return)
+- [Printing QR labels](#printing-qr-labels)
 - [Student roster](#student-roster)
 - [The check-out history report](#the-check-out-history-report)
 - [CSV format](#csv-format)
@@ -66,9 +67,11 @@ In plain terms, the app lets you:
 - Maintain a **student roster**, imported from a CLOCKIN CSV export or entered
   by hand.
 - Print a **check-out history report** showing who had what, and when.
+- Generate **printable QR labels** for assets — a PDF sheet you print, cut out,
+  and stick on the gear, so every device carries the code the scan station reads.
 
-This version (Phase 1) handles assets. Consumable supplies and printed QR
-labels are planned — see [What's next](#whats-next).
+This version (Phase 1) handles assets. Consumable supplies are planned — see
+[What's next](#whats-next).
 
 ---
 
@@ -163,7 +166,7 @@ inventory-manager/
 ├── Dockerfile                # builds the app image (Python 3.12 slim + gunicorn)
 ├── compose.yml               # Portainer / Compose stack — builds from source
 ├── compose.web-editor.yml    # Portainer web editor — pulls the pre-built image
-├── requirements.txt          # Python dependencies: Flask, bcrypt, gunicorn
+├── requirements.txt          # Python deps: Flask, bcrypt, gunicorn, qrcode, reportlab
 ├── .gitignore
 ├── .dockerignore             # keeps .git, the database, venv out of the image
 ├── .gitattributes            # marks the vendored QR library so language stats stay accurate
@@ -174,6 +177,7 @@ inventory-manager/
 └── app/
     ├── app.py                # Flask application — routes, auth, checkout logic
     ├── db.py                 # SQLite schema, connection helper, first-run seed
+    ├── labels.py             # QR label PDF generation (qrcode + reportlab)
     ├── static/
     │   ├── css/
     │   │   └── style.css     # the entire "dragon-tech ops console" theme
@@ -316,10 +320,32 @@ on the right. A student badge scan fills the Student slot; an asset scan fills
 the Asset slot.*
 
 > **Note on QR codes:** the scan station reads two kinds of codes — CLOCKIN
-> student badges (already printed by CLOCKIN) and asset codes. This version
-> does **not** yet generate printable QR labels for assets; printing asset
-> labels is planned (see [What's next](#whats-next)). To test the scan station
-> now, generate a QR code containing the literal asset code, e.g. `DT-LAP-001`.
+> student badges (already printed by CLOCKIN) and asset codes. You generate the
+> asset codes from this app — see [Printing QR labels](#printing-qr-labels)
+> below.
+
+---
+
+## Printing QR labels
+
+Every asset can be given a printed QR label, so the scan station can read it off
+the device. The **Print Labels** page (admin and managers) lists all assets;
+you search or filter to the ones you want, tick them, and click **Generate PDF**.
+
+The result is a print-ready PDF sheet — fifteen labels to a page on US Letter,
+laid out in a grid with light cut guides. Each label shows the QR code (which
+encodes the asset code, e.g. `DT-LAP-001`), the code itself in mono text, and
+the item name. Print it on plain paper, cut the labels out along the guides, and
+stick them on the gear. The QR codes are exactly what the scan station expects
+to read, so a freshly printed label works immediately at checkout.
+
+Labels are generated server-side with the `qrcode` and `reportlab` libraries —
+the same toolchain CLOCKIN uses for its badges — so nothing leaves the local
+network.
+
+<!-- SCREENSHOT: the Print Labels selection page, and/or a generated label
+     sheet. Fictional sample assets only. -->
+*(Screenshot: Print Labels page — to be added.)*
 
 ---
 
@@ -440,8 +466,6 @@ left out:
 - **Consumable supplies.** This version tracks assets — uniquely identified
   items. Quantity-tracked consumables (resistors, wire, solder) are planned but
   not built. The database already has the columns for them; the screens do not.
-- **Printable asset QR labels.** The scan station can *read* an asset code, but
-  the app does not yet *generate* the printable label sheet.
 - **A live connection to CLOCKIN.** The two apps share the `employee_id` key
   and the physical badge, but they do not talk to each other over the network.
   The roster is synced by CSV, by hand, on purpose — it keeps the two apps
@@ -469,8 +493,6 @@ The module roadmap, in rough order:
 - **Phase 2 — Consumables.** Quantity-tracked supplies with a low-stock
   threshold and a dashboard warning when stock runs low. The dashboard already
   has the low-stock panel wired and waiting.
-- **Phase 2 — Asset QR labels.** A printable label sheet, with the Dragon
-  Technologies logo, so every asset gets a scannable sticker.
 - **Tighter CLOCKIN integration.** Possibly a direct roster sync, so importing
   a CSV by hand is no longer necessary — designed carefully so the two apps
   stay independently deployable.
