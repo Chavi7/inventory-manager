@@ -159,22 +159,30 @@ volume (`inventory-data`) so it survives container rebuilds.
 ```
 inventory-manager/
 ├── README.md
-├── Dockerfile               # builds the app image (Python 3.12 slim + gunicorn)
-├── compose.yml       # Portainer / Compose stack definition
-├── requirements.txt         # Python dependencies: Flask, bcrypt, gunicorn
+├── LICENSE                   # MIT
+├── Dockerfile                # builds the app image (Python 3.12 slim + gunicorn)
+├── compose.yml               # Portainer / Compose stack — builds from source
+├── compose.web-editor.yml    # Portainer web editor — pulls the pre-built image
+├── requirements.txt          # Python dependencies: Flask, bcrypt, gunicorn
 ├── .gitignore
+├── .dockerignore             # keeps .git, the database, venv out of the image
+├── .gitattributes            # marks the vendored QR library so language stats stay accurate
+├── .github/
+│   └── workflows/
+│       └── publish.yml       # builds and pushes the image to GHCR on every push to main
+├── docs/                     # README screenshots (fictional sample data)
 └── app/
-    ├── app.py               # Flask application — routes, auth, checkout logic
-    ├── db.py                # SQLite schema, connection helper, first-run seed
+    ├── app.py                # Flask application — routes, auth, checkout logic
+    ├── db.py                 # SQLite schema, connection helper, first-run seed
     ├── static/
     │   ├── css/
-    │   │   └── style.css    # the entire "dragon-tech ops console" theme
-    │   ├── fonts/           # self-hosted Barlow + JetBrains Mono (no CDN)
-    │   ├── img/             # DragonForge logo files (shared with CLOCKIN)
+    │   │   └── style.css     # the entire "dragon-tech ops console" theme
+    │   ├── fonts/            # self-hosted Barlow + JetBrains Mono (no CDN)
+    │   ├── img/              # DragonForge logo files (shared with CLOCKIN)
     │   └── js/
-    │       ├── jsQR.js      # self-hosted QR decoder for the scan station
-    │       └── scan.js      # scan station camera + checkout flow
-    └── templates/           # Jinja2 HTML templates, one per screen
+    │       ├── jsQR.js       # self-hosted QR decoder for the scan station
+    │       └── scan.js       # scan station camera + checkout flow
+    └── templates/            # Jinja2 HTML templates, one per screen
 ```
 
 Everything is self-hosted — fonts and the QR library ship with the app — so it
@@ -197,7 +205,10 @@ cd app
 python3 app.py
 ```
 
-Then open `http://localhost:5000` in a browser.
+Then open `http://localhost:5000` in a browser. (A source run uses Flask's
+default port 5000. The Docker deployments map it to host port 5001 instead, to
+avoid colliding with CLOCKIN — so the different port number between this section
+and the install sections is intentional, not a typo.)
 
 On a source run, no environment variables are needed. The app creates a local
 `app/data/inventory.db` automatically and seeds it on first launch. (In Docker,
@@ -214,17 +225,21 @@ deployment uses gunicorn as the production server.
 
 The app has three roles:
 
-| Role      | Who it's for              | Can do                                                        |
-|-----------|---------------------------|---------------------------------------------------------------|
-| `admin`   | The teacher               | Everything — items, categories, users, roster, reports        |
-| `manager` | Student stockroom staff   | Add / edit / delete items, run the scan station               |
-| `student` | Everyone else             | View inventory, use the scan station to check out and return  |
+| Role      | Who it's for            | Can do                                                       |
+|-----------|-------------------------|--------------------------------------------------------------|
+| `admin`   | The teacher             | Everything — items, categories, users, roster, reports       |
+| `manager` | Student stockroom staff | Add / edit / delete items, run the scan station              |
+| `student` | Everyone else           | View inventory, use the scan station to check out and return |
 
 On first launch the database is seeded with **one admin account** —
-username `admin`, password `dragon-admin`. **Change this password immediately**
-after the first login, on a real deployment. (The simplest way: as admin, add a
-new admin account with a strong password on the Users page, then delete the
-seeded `admin` account.)
+username `admin`, password `dragon-admin`. This default exists only so you can
+log in the very first time. **On a real deployment, change it immediately:**
+log in as `admin`, go to the Users page, create a new admin account with a
+strong password, then delete the seeded `admin` account.
+
+(A self-service first-run setup screen — where you set the admin password on
+first launch instead of using a seeded default — is planned; see
+[What's next](#whats-next).)
 
 The seed also adds **two demo students** so the scan station can be tested
 before a real roster is imported. Delete them once your roster is in.
@@ -346,12 +361,12 @@ print-ready. (Sample data — fictional students.)*
 The roster importer expects a CSV with a header row. Only `employee_id` is
 required; the other columns are optional but recommended.
 
-| Column        | Required | Description                                              |
-|---------------|----------|----------------------------------------------------------|
-| `employee_id` | Yes      | The student's CLOCKIN identifier, e.g. `CYB1-003`        |
-| `name`        | No       | Student's display name; falls back to the ID if blank    |
-| `student_id`  | No       | The school's official ID number                         |
-| `section`     | No       | Class section, e.g. `CYB1`                               |
+| Column        | Required | Description                                           |
+|---------------|----------|-------------------------------------------------------|
+| `employee_id` | Yes      | The student's CLOCKIN identifier, e.g. `CYB1-003`     |
+| `name`        | No       | Student's display name; falls back to the ID if blank |
+| `student_id`  | No       | The school's official ID number                       |
+| `section`     | No       | Class section, e.g. `CYB1`                            |
 
 The CLOCKIN roster export already uses a column named exactly `employee_id`, so
 a CLOCKIN export imports here directly. Rows whose `employee_id` already exists
@@ -448,6 +463,9 @@ many simultaneous schools or campuses.
 
 The module roadmap, in rough order:
 
+- **First-run setup screen.** Replace the seeded `admin` / `dragon-admin`
+  default with a one-time setup page that has you create the admin account (and
+  set its password) on first launch — matching how CLOCKIN handles first run.
 - **Phase 2 — Consumables.** Quantity-tracked supplies with a low-stock
   threshold and a dashboard warning when stock runs low. The dashboard already
   has the low-stock panel wired and waiting.
