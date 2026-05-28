@@ -100,15 +100,37 @@ and change the password right away.
 
 ## Install via Portainer — Web editor
 
-> **Note:** This path uses a pre-built container image published to a registry
-> (such as GHCR). **No pre-built image exists for the Inventory Manager yet** —
-> the only supported Portainer path today is the **Repository** method above,
-> which builds from source.
->
-> This section is a placeholder. Once a published image is available, the
-> web-editor path will be documented here: paste a compose file that uses
-> `image:` instead of `build:` into Portainer's web editor and deploy. Until
-> then, use the Repository method.
+This is the fastest install. It uses a pre-built image published to GitHub
+Container Registry (GHCR), so the server does not need to clone the repo or
+build anything. New versions are published automatically on every push to
+`main` by a GitHub Actions workflow.
+
+The image is public — no GHCR login is needed on the server.
+
+1. In Portainer, open **Stacks** and click **Add stack**.
+2. Name the stack, for example `inventory-manager`.
+3. Under **Build method**, choose **Web editor**.
+4. Open `compose.web-editor.yml` in this repo and copy its entire contents
+   into the editor.
+5. Scroll down to **Environment variables** and click **Add an environment
+   variable**:
+   - **name:** `INVENTORY_SECRET_KEY`
+   - **value:** a long random string. On a Mac or Linux machine,
+     `python3 -c "import secrets; print(secrets.token_hex(32))"`
+     prints a good one.
+6. Click **Deploy the stack**.
+
+The app is reachable at host port **5001** (e.g. `http://your-server-ip:5001`).
+
+**Updating later.** When a new version is pushed to `main`, GHCR gets a new
+`:latest` image automatically. In Portainer, open the stack and click
+**Pull and redeploy** — Portainer pulls the newest image and restarts the
+container. The database in the `inventory-data` volume is untouched.
+
+**Image tags published.** Every push to `main` updates `:latest`, `:main`, and
+a `:sha-<short>` tag for the exact commit. Tagged releases (`vX.Y.Z`) also
+publish `:vX.Y.Z` and `:X.Y` tags, so you can pin a specific version in your
+compose file instead of tracking `:latest` if you want stability over recency.
 
 ---
 

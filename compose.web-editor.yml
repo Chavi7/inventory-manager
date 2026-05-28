@@ -1,0 +1,39 @@
+# INVENTORY MANAGER - web-editor deployment (pre-built image from GHCR)
+#
+# This file is for installing the Inventory Manager WITHOUT cloning the repo
+# or building anything. It pulls a ready-made image from GitHub Container
+# Registry.
+#
+# HOW TO USE:
+#   1. In Portainer: Stacks -> Add stack -> Web editor
+#   2. Paste this entire file into the editor
+#   3. Under "Environment variables", add:
+#        name:  INVENTORY_SECRET_KEY
+#        value: a long random string (see README for how to generate one)
+#   4. Click "Deploy the stack"
+#
+# To update later: Stacks -> inventory-manager -> "Pull and redeploy"
+# (pull_policy: always means it fetches the newest image automatically)
+#
+# NOTE: This differs from compose.yml, which BUILDS the image from source.
+# This one DOWNLOADS a pre-built image instead.
+
+services:
+  inventory:
+    image: ghcr.io/chavi7/inventory-manager:latest
+    container_name: inventory-manager
+    restart: unless-stopped
+    pull_policy: always
+    ports:
+      # host:container - change the left number if 5001 is taken on your host.
+      - "5001:5000"
+    environment:
+      - INVENTORY_SECRET_KEY=${INVENTORY_SECRET_KEY}
+      - INVENTORY_DB_PATH=/data/inventory.db
+    volumes:
+      # SQLite database persists here, surviving redeploys.
+      - inventory-data:/data
+
+volumes:
+  inventory-data:
+    name: inventory-data
