@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Print Labels{% endblock %}
+{% block content %}
+<h1 class="page-title">Print Asset Labels</h1>
+<p class="scan-intro">
+  Select the assets you want QR labels for, then generate a printable PDF.
+  Each label shows the QR code (encoding the asset code), the asset code, and
+  the item name. Print on plain paper and cut along the guides. The scan
+  station reads these QR codes directly.
+</p>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" value="{{ q }}"
+         placeholder="Search name or code...">
+  <select name="category">
+    <option value="">All categories</option>
+    {% for c in categories %}
+      <option value="{{ c['id'] }}"
+        {% if cat_filter == c['id']|string %}selected{% endif %}>
+        {{ c['name'] }}
+      </option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary">Filter</button>
+  <a href="{{ url_for('labels_page') }}" class="btn btn-ghost">Reset</a>
+</form>
+
+<form method="post" action="{{ url_for('labels_pdf') }}" target="_blank">
+  <section class="panel">
+    <div class="action-row" style="margin-top:0; margin-bottom:14px;">
+      <button type="button" class="btn btn-ghost btn-sm"
+              onclick="document.querySelectorAll('.lbl-cb').forEach(c=>c.checked=true)">
+        Select all
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm"
+              onclick="document.querySelectorAll('.lbl-cb').forEach(c=>c.checked=false)">
+        Clear
+      </button>
+      <button type="submit" class="btn btn-primary">Generate PDF</button>
+    </div>
+
+    {% if items %}
+    <table class="data-table">
+      <thead>
+        <tr><th style="width:40px;"></th><th>Code</th><th>Name</th>
+            <th>Category</th></tr>
+      </thead>
+      <tbody>
+      {% for i in items %}
+        <tr>
+          <td>
+            <input type="checkbox" class="lbl-cb" name="item_ids"
+                   value="{{ i['id'] }}" checked>
+          </td>
+          <td class="mono">{{ i['item_code'] }}</td>
+          <td>{{ i['name'] }}</td>
+          <td>{{ i['category_name'] }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-note">No assets to print. Add some on the
+       <strong>Add Asset</strong> page first.</p>
+    {% endif %}
+  </section>
+</form>
+{% endblock %}

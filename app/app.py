@@ -10,12 +10,14 @@ import functools
 from datetime import datetime, timedelta
 
 import bcrypt
+import qrcode
 from flask import (
     Flask, render_template, request, redirect, url_for, session,
     flash, jsonify, Response,
 )
 
 from db import get_db, init_db
+from labels import build_label_pdf
 
 app = Flask(__name__)
 # In production set INVENTORY_SECRET_KEY via the environment / compose file.
@@ -683,6 +685,33 @@ def roster_import():
 
 
 # ---------------------------------------------------------------------------
+# Asset QR labels  (admin + manager)
+# ---------------------------------------------------------------------------
+@app.route("/item/<int:item_id>/qr.png")
+@role_required("admin", "manager")
+def item_qr(item_id):
+    """Serve a single asset's QR code as a PNG (handy for one-off printing
+    or embedding elsewhere). The QR encodes the bare item_code, which is
+    exactly what the scan station expects to read."""
+    conn = get_db()
+    item = conn.execute(
+        "SELECT item_code FROM items WHERE id = ?", (item_id,)
+    ).fetchone()
+    conn.close()
+    if item is None:
+        return "Not found", 404
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M,
+                       box_size=10, border=2)
+    qr.add_data(item["item_code"])
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return Response(buf.getvalue(), mimetype="image/png")
+
+
+# ---------------------------------------------------------------------------
 # Check-out history report  (printable)
 # ---------------------------------------------------------------------------
 @app.route("/report/history")
@@ -736,6 +765,67 @@ def report_history_csv():
         out.getvalue(), mimetype="text/csv",
         headers={"Content-Disposition":
                  "attachment; filename=checkout_history.csv"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Asset label printing  (admin + manager)
+# ---------------------------------------------------------------------------
+@app.route("/labels")
+@role_required("admin", "manager")
+def labels_page():
+    """Pick which assets to print QR labels for."""
+    q = request.args.get("q", "").strip()
+    cat_filter = request.args.get("category", "").strip()
+    conn = get_db()
+    sql = """SELECT i.id, i.item_code, i.name, c.name AS category_name
+             FROM items i JOIN categories c ON c.id = i.category_id
+             WHERE i.kind = 'asset'"""
+    params = []
+    if q:
+        sql += " AND (i.name LIKE ? OR i.item_code LIKE ?)"
+        params += [f"%{q}%", f"%{q}%"]
+    if cat_filter:
+        sql += " AND c.id = ?"
+        params.append(cat_filter)
+    sql += " ORDER BY i.item_code"
+    items = conn.execute(sql, params).fetchall()
+    categories = conn.execute(
+        "SELECT * FROM categories ORDER BY name"
+    ).fetchall()
+    conn.close()
+    return render_template("labels.html", items=items, categories=categories,
+                           q=q, cat_filter=cat_filter)
+
+
+@app.route("/labels/pdf", methods=["POST"])
+@role_required("admin", "manager")
+def labels_pdf():
+    """Generate a printable PDF of QR labels for the selected assets."""
+    ids = request.form.getlist("item_ids")
+    if not ids:
+        flash("Select at least one asset to print labels for.", "error")
+        return redirect(url_for("labels_page"))
+
+    conn = get_db()
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(
+        f"""SELECT item_code, name FROM items
+            WHERE id IN ({placeholders}) AND kind='asset'
+            ORDER BY item_code""",
+        ids,
+    ).fetchall()
+    conn.close()
+
+    if not rows:
+        flash("No matching assets found.", "error")
+        return redirect(url_for("labels_page"))
+
+    pdf_bytes = build_label_pdf([(r["item_code"], r["name"]) for r in rows])
+    return Response(
+        pdf_bytes, mimetype="application/pdf",
+        headers={"Content-Disposition":
+                 "inline; filename=asset-labels.pdf"},
     )
 
 

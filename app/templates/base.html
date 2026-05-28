@@ -33,6 +33,7 @@
   <a href="{{ url_for('report_history') }}">History Report</a>
   {% if current_role in ('admin', 'manager') %}
     <a href="{{ url_for('item_new') }}">Add Asset</a>
+    <a href="{{ url_for('labels_page') }}">Print Labels</a>
   {% endif %}
   {% if current_role == 'admin' %}
     <a href="{{ url_for('categories') }}">Categories</a>
