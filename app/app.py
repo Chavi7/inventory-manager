@@ -100,8 +100,81 @@ def generate_item_code(conn, category_id):
 
 
 # ---------------------------------------------------------------------------
+# First-run setup guard
+# ---------------------------------------------------------------------------
+def admin_exists():
+    """True if at least one admin account exists. When none does, the app is
+    in first-run mode and must route everything to /setup."""
+    conn = get_db()
+    n = conn.execute(
+        "SELECT COUNT(*) FROM users WHERE role = 'admin'"
+    ).fetchone()[0]
+    conn.close()
+    return n > 0
+
+
+# Endpoints reachable before any admin exists (the setup page itself and its
+# static assets). Everything else redirects to /setup until setup is done.
+_SETUP_ALLOWED = {"setup", "static"}
+
+
+@app.before_request
+def require_setup_first():
+    """If no admin account exists yet, force the first-run setup screen."""
+    if request.endpoint in _SETUP_ALLOWED:
+        return None
+    if not admin_exists():
+        return redirect(url_for("setup"))
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
+@app.route("/setup", methods=["GET", "POST"])
+def setup():
+    """First-run screen: create the initial admin account. Only available
+    while no admin exists; once one does, this redirects to login."""
+    # If an admin already exists, setup is closed - send them to login.
+    if admin_exists():
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm", "")
+
+        # Validation, with clear messages.
+        if not username or not password:
+            flash("Username and password are required.", "error")
+        elif len(username) < 3:
+            flash("Username must be at least 3 characters.", "error")
+        elif len(password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+        elif password != confirm:
+            flash("The two passwords don't match.", "error")
+        else:
+            conn = get_db()
+            # Re-check inside the transaction in case of a race.
+            if conn.execute(
+                "SELECT COUNT(*) FROM users WHERE role='admin'"
+            ).fetchone()[0] == 0:
+                pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                conn.execute(
+                    "INSERT INTO users (username, password_hash, role,"
+                    " created_at) VALUES (?, ?, 'admin', ?)",
+                    (username, pw, _now()),
+                )
+                conn.commit()
+                conn.close()
+                flash("Admin account created. Please log in.", "success")
+                return redirect(url_for("login"))
+            conn.close()
+            return redirect(url_for("login"))
+
+    return render_template("setup.html")
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>First-run setup &middot; Dragon Technologies Inventory</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+<div class="login-card">
+  <img src="{{ url_for('static', filename='img/dragonforge-icon-sm.png') }}"
+       alt="Dragon Technologies" class="login-logo">
+  <h1 class="login-title">INVENTORY MANAGER</h1>
+  <p class="login-sub">CTEC &middot; First-run setup</p>
+
+  <p style="font-size: 0.88rem; margin-bottom: 14px; line-height: 1.45;">
+    Welcome. Before anyone can use the app, create the first
+    <strong>admin account</strong>. This is the teacher account; you can add
+    student-manager and student accounts after logging in.
+  </p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="post" class="login-form">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autofocus required
+           minlength="3" autocomplete="username">
+    <p class="field-hint" style="margin-top: 2px;">At least 3 characters.</p>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required
+           minlength="8" autocomplete="new-password">
+
+    <label for="confirm">Confirm password</label>
+    <input type="password" id="confirm" name="confirm" required
+           minlength="8" autocomplete="new-password">
+    <p class="field-hint" style="margin-top: 2px;">
+      At least 8 characters. Choose something only you know &mdash; this is the
+      teacher account.
+    </p>
+
+    <button type="submit" class="btn btn-primary btn-block">
+      Create admin and continue
+    </button>
+  </form>
+</div>
+</body>
+</html>

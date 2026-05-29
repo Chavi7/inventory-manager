@@ -4,7 +4,6 @@ SQLite schema, connection helper, and first-run seeding.
 """
 import sqlite3
 import os
-import bcrypt
 from datetime import datetime
 
 # Where the SQLite database lives.
@@ -105,10 +104,18 @@ def init_db():
 
 
 def _seed(conn):
-    """Seed categories, an admin account, and demo students - only if empty."""
+    """Seed the default categories only.
+
+    No admin account and no demo students are seeded: the first admin is
+    created through the first-run /setup screen (see app.py), so no default
+    password ever exists in the codebase. The app starts as a clean,
+    production-ready slate.
+    """
     now = datetime.now().isoformat(timespec="seconds")
 
     # --- Categories -------------------------------------------------------
+    # These are sensible starting categories, not credentials, so seeding
+    # them is fine. Admins can edit or add more later.
     if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
         seed_categories = [
             ("Laptops", "LAP", 1),     # cap 1 laptop per student
@@ -122,30 +129,6 @@ def _seed(conn):
                 "INSERT INTO categories (name, prefix, checkout_limit, next_number)"
                 " VALUES (?, ?, ?, 1)",
                 (name, prefix, limit),
-            )
-
-    # --- Admin account ----------------------------------------------------
-    # Default password is 'dragon-admin'. CHANGE THIS after first login.
-    if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
-        pw = bcrypt.hashpw(b"dragon-admin", bcrypt.gensalt()).decode()
-        conn.execute(
-            "INSERT INTO users (username, password_hash, role, created_at)"
-            " VALUES (?, ?, 'admin', ?)",
-            ("admin", pw, now),
-        )
-
-    # --- Demo students for end-to-end testing -----------------------------
-    # Fake badge IDs so checkout can be tested before a real roster import.
-    if conn.execute("SELECT COUNT(*) FROM students").fetchone()[0] == 0:
-        demo = [
-            ("CYB1-001", "Demo Student One", "900001", "CYB1"),
-            ("ITF-001", "Demo Student Two", "900002", "ITF"),
-        ]
-        for emp, name, sid, section in demo:
-            conn.execute(
-                "INSERT INTO students (employee_id, name, student_id, section,"
-                " active, created_at) VALUES (?, ?, ?, ?, 1, ?)",
-                (emp, name, sid, section, now),
             )
 
     conn.commit()
