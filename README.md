@@ -26,6 +26,7 @@ checked out. (Sample data — all student names are fictional.)*
 - [What's in the box](#whats-in-the-box)
 - [Quick start (developer / source install)](#quick-start-developer--source-install)
 - [Roles and accounts](#roles-and-accounts)
+- [First-run setup](#first-run-setup)
 - [Categories and item codes](#categories-and-item-codes)
 - [Item management](#item-management)
 - [The scan station — check-out and return](#the-scan-station--check-out-and-return)
@@ -96,8 +97,10 @@ When it finishes, the app is reachable on the server at port **5001**
 collide with CLOCKIN; change the host port in the compose file if 5001 is
 already in use.
 
-Log in with the seeded admin account (see [Roles and accounts](#roles-and-accounts))
-and change the password right away.
+On the very first visit, the app loads the **First-run setup screen** — there
+is no default admin account. You create the admin (username and password) right
+there, then log in with what you just chose. See
+[First-run setup](#first-run-setup) below.
 
 ---
 
@@ -215,9 +218,11 @@ avoid colliding with CLOCKIN — so the different port number between this secti
 and the install sections is intentional, not a typo.)
 
 On a source run, no environment variables are needed. The app creates a local
-`app/data/inventory.db` automatically and seeds it on first launch. (In Docker,
-the compose file points the database at the `/data` volume instead — the same
-pattern CLOCKIN uses.)
+`app/data/inventory.db` automatically and seeds the **default categories** on
+first launch. It does **not** seed any user account; the first time you load
+the app, the [First-run setup](#first-run-setup) screen appears so you can
+create the admin yourself. (In Docker, the compose file points the database at
+the `/data` volume instead — the same pattern CLOCKIN uses.)
 
 Stop the app with `Ctrl+C`. The development server prints a "do not use in
 production" warning — that is expected and fine for source testing; the Docker
@@ -235,18 +240,34 @@ The app has three roles:
 | `manager` | Student stockroom staff | Add / edit / delete items, run the scan station              |
 | `student` | Everyone else           | View inventory, use the scan station to check out and return |
 
-On first launch the database is seeded with **one admin account** —
-username `admin`, password `dragon-admin`. This default exists only so you can
-log in the very first time. **On a real deployment, change it immediately:**
-log in as `admin`, go to the Users page, create a new admin account with a
-strong password, then delete the seeded `admin` account.
+### First-run setup
 
-(A self-service first-run setup screen — where you set the admin password on
-first launch instead of using a seeded default — is planned; see
-[What's next](#whats-next).)
+On a fresh deployment the database starts empty of users. The first time
+anyone visits the app, every route redirects to a **First-run setup** screen
+where you create the initial admin account — your username, your password.
+That account becomes the teacher account, and the setup screen disappears
+once it's created. No default password ever exists in the codebase or on a
+deployed instance.
 
-The seed also adds **two demo students** so the scan station can be tested
-before a real roster is imported. Delete them once your roster is in.
+![First-run setup](docs/setup.png)
+
+*The First-run setup screen — shown only when no admin account exists yet.
+Create the teacher account here and continue to login.*
+
+### Testing the scan station
+
+The database no longer seeds demo students, so a fresh deployment starts with
+an empty roster. To try the scan station before you import a real CLOCKIN
+roster, add a test student manually on the **Roster** page (any `employee_id`
+will do, e.g. `TEST-001`), then generate a CLOCKIN-style badge JSON for that
+student to scan:
+
+```json
+{"school":"CTEC","name":"Test Student","employee_id":"TEST-001","student_id":""}
+```
+
+Any QR-code generator can encode that JSON for a quick test. Real CLOCKIN
+badges work the same way and need no setup beyond importing the roster.
 
 ---
 
@@ -406,8 +427,9 @@ are updated in place; new rows are added.
 - `INVENTORY_SECRET_KEY` signs login sessions. On any real deployment, set it
   to a long random value. The placeholder in `compose.yml` must be
   changed before deploying.
-- The seeded `admin` / `dragon-admin` account is a convenience for first login
-  only. Change that password immediately on a real deployment.
+- **No default credentials.** The app ships with no admin account; the first
+  visitor creates the admin via the First-run setup screen. This means there's
+  no known password sitting in the public repo or in a deployed instance.
 - This app is built for a **trusted classroom network**. It has no rate
   limiting, no HTTPS of its own, and no defense against a hostile user on the
   same network. It is not intended to be exposed to the public internet. If it
@@ -487,9 +509,6 @@ many simultaneous schools or campuses.
 
 The module roadmap, in rough order:
 
-- **First-run setup screen.** Replace the seeded `admin` / `dragon-admin`
-  default with a one-time setup page that has you create the admin account (and
-  set its password) on first launch — matching how CLOCKIN handles first run.
 - **Phase 2 — Consumables.** Quantity-tracked supplies with a low-stock
   threshold and a dashboard warning when stock runs low. The dashboard already
   has the low-stock panel wired and waiting.
