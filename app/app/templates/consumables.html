@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Consumables{% endblock %}
+{% block content %}
+<h1 class="page-title">Consumables</h1>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" value="{{ q }}"
+         placeholder="Search name or code...">
+  <select name="category">
+    <option value="">All categories</option>
+    {% for c in categories %}
+      <option value="{{ c['id'] }}"
+        {% if cat_filter == c['id']|string %}selected{% endif %}>
+        {{ c['name'] }}
+      </option>
+    {% endfor %}
+  </select>
+  <select name="show">
+    <option value="all"  {% if show == 'all'  %}selected{% endif %}>All</option>
+    <option value="low"  {% if show == 'low'  %}selected{% endif %}>Low stock only</option>
+  </select>
+  <button type="submit" class="btn btn-primary">Filter</button>
+  <a href="{{ url_for('consumables_list') }}" class="btn btn-ghost">Reset</a>
+  {% if current_role in ('admin', 'manager') %}
+    <a href="{{ url_for('consumable_new') }}"
+       class="btn btn-primary">Add Consumable</a>
+  {% endif %}
+</form>
+
+<section class="panel">
+  <p class="result-count">{{ items|length }} consumable(s)</p>
+  {% if items %}
+  <table class="data-table">
+    <thead>
+      <tr><th>Code</th><th>Name</th><th>Category</th>
+          <th>On Hand</th><th>Low Threshold</th><th>Location</th></tr>
+    </thead>
+    <tbody>
+    {% for i in items %}
+      {% set low = i['low_stock_threshold'] is not none
+                   and (i['quantity_on_hand'] or 0) <= i['low_stock_threshold'] %}
+      <tr>
+        <td><a class="mono"
+               href="{{ url_for('consumable_detail', item_id=i['id']) }}">{{ i['item_code'] }}</a></td>
+        <td>{{ i['name'] }}</td>
+        <td>{{ i['category_name'] }}</td>
+        <td>
+          {% if low %}
+            <span class="pill pill-retired-lost">{{ i['quantity_on_hand'] or 0 }}</span>
+          {% else %}
+            <span class="mono">{{ i['quantity_on_hand'] or 0 }}</span>
+          {% endif %}
+        </td>
+        <td class="mono dim">{{ i['low_stock_threshold'] if i['low_stock_threshold'] is not none else '—' }}</td>
+        <td>{{ i['location'] or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-note">No consumables match. Try adjusting the filters,
+    {% if current_role in ('admin', 'manager') %}
+      or add one from <strong>Add Consumable</strong>.
+    {% else %}
+      or ask a manager to add one.
+    {% endif %}
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

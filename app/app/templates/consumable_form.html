@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Add Consumable{% endblock %}
+{% block content %}
+<h1 class="page-title">Add New Consumable</h1>
+
+<section class="panel panel-form">
+  <form method="post">
+    <label for="name">Item name <span class="req">*</span></label>
+    <input type="text" id="name" name="name" required
+           placeholder="e.g. 1/4W Resistors 10kΩ">
+
+    <label for="category_id">Category <span class="req">*</span></label>
+    <select id="category_id" name="category_id" required>
+      <option value="">— select —</option>
+      {% for c in categories %}
+        <option value="{{ c['id'] }}">{{ c['name'] }} ({{ c['prefix'] }})</option>
+      {% endfor %}
+    </select>
+    <p class="field-hint">The item code (e.g. <span class="mono">DT-CMP-001</span>)
+       generates automatically from the category, just like assets.</p>
+
+    <label for="quantity_on_hand">Starting quantity on hand</label>
+    <input type="number" id="quantity_on_hand" name="quantity_on_hand"
+           min="0" value="0">
+
+    <label for="low_stock_threshold">Low-stock threshold</label>
+    <input type="number" id="low_stock_threshold" name="low_stock_threshold"
+           min="0" placeholder="leave blank for no alert">
+    <p class="field-hint">When the on-hand quantity falls to this number or
+       below, it shows up in the dashboard's low-stock panel.</p>
+
+    <label for="location">Location</label>
+    <input type="text" id="location" name="location"
+           placeholder="e.g. Bin C-1">
+
+    <label for="notes">Notes</label>
+    <textarea id="notes" name="notes" rows="3"></textarea>
+
+    <div class="action-row">
+      <button type="submit" class="btn btn-primary">Create Consumable</button>
+      <a href="{{ url_for('consumables_list') }}"
+         class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

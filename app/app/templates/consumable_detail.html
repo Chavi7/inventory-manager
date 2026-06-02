@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ item['item_code'] }}{% endblock %}
+{% block content %}
+<div class="detail-head">
+  <div>
+    <h1 class="page-title mono">{{ item['item_code'] }}</h1>
+    <p class="detail-name">{{ item['name'] }}</p>
+  </div>
+  {% if is_low %}
+    <span class="pill pill-retired-lost pill-lg">Low: {{ item['quantity_on_hand'] or 0 }} on hand</span>
+  {% else %}
+    <span class="pill pill-available pill-lg">{{ item['quantity_on_hand'] or 0 }} on hand</span>
+  {% endif %}
+</div>
+
+<section class="panel">
+  <h2 class="panel-title">Details</h2>
+  <dl class="detail-list">
+    <dt>Category</dt><dd>{{ item['category_name'] }}</dd>
+    <dt>Location</dt><dd>{{ item['location'] or '—' }}</dd>
+    <dt>On hand</dt><dd class="mono">{{ item['quantity_on_hand'] or 0 }}</dd>
+    <dt>Low threshold</dt>
+    <dd class="mono">{{ item['low_stock_threshold'] if item['low_stock_threshold'] is not none else '—' }}</dd>
+    <dt>Notes</dt><dd>{{ item['notes'] or '—' }}</dd>
+    <dt>Added</dt><dd>{{ item['created_at'][:10] }}</dd>
+  </dl>
+
+  {% if current_role in ('admin', 'manager') %}
+  <div class="action-row">
+    <form method="post"
+          action="{{ url_for('consumable_delete', item_id=item['id']) }}"
+          onsubmit="return confirm('Delete {{ item['item_code'] }} and its full adjustment history? This cannot be undone.');">
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+{% if current_role in ('admin', 'manager') %}
+<section class="panel panel-form">
+  <h2 class="panel-title">Adjust Stock</h2>
+  <form method="post"
+        action="{{ url_for('consumable_adjust', item_id=item['id']) }}">
+    <label for="direction">Action <span class="req">*</span></label>
+    <select id="direction" name="direction" required>
+      <option value="restock">Restock (+ add to stock)</option>
+      <option value="dispense">Dispense (− take from stock)</option>
+    </select>
+
+    <label for="amount">Amount <span class="req">*</span></label>
+    <input type="number" id="amount" name="amount" min="1" required>
+
+    <label for="student_id">Student (optional &mdash; dispense only)</label>
+    <select id="student_id" name="student_id">
+      <option value="">— none —</option>
+      {% for s in students %}
+        <option value="{{ s['id'] }}">{{ s['name'] }} ({{ s['employee_id'] }})</option>
+      {% endfor %}
+    </select>
+    <p class="field-hint">Pick a student when dispensing if you want the history
+       to show who received the supplies. Ignored on restocks.</p>
+
+    <label for="note">Note <span class="req">*</span></label>
+    <input type="text" id="note" name="note" required maxlength="200"
+           placeholder="e.g. 'Restock from order #4521' or 'Class soldering project'">
+
+    <div class="action-row">
+      <button type="submit" class="btn btn-primary">Apply Adjustment</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2 class="panel-title">Adjustment History</h2>
+  {% if history %}
+  <table class="data-table">
+    <thead>
+      <tr><th>When</th><th>Change</th><th>After</th><th>Student</th>
+          <th>Note</th><th>By</th></tr>
+    </thead>
+    <tbody>
+    {% for h in history %}
+      <tr>
+        <td class="mono">{{ h['adjusted_at'][:16]|replace('T', ' ') }}</td>
+        <td>
+          {% if h['delta'] > 0 %}
+            <span class="pill pill-available">+{{ h['delta'] }}</span>
+          {% else %}
+            <span class="pill pill-checked-out">{{ h['delta'] }}</span>
+          {% endif %}
+        </td>
+        <td class="mono">{{ h['new_quantity'] }}</td>
+        <td>
+          {% if h['student_name'] %}
+            {{ h['student_name'] }} <span class="mono dim">({{ h['employee_id'] }})</span>
+          {% else %}
+            <span class="dim">—</span>
+          {% endif %}
+        </td>
+        <td>{{ h['note'] }}</td>
+        <td class="dim">{{ h['by_name'] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-note">No adjustments yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
