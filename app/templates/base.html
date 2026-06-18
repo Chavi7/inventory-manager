@@ -29,6 +29,7 @@
 <nav class="mainnav">
   <a href="{{ url_for('dashboard') }}">Dashboard</a>
   <a href="{{ url_for('inventory') }}">Inventory</a>
+  <a href="{{ url_for('consumables_list') }}">Consumables</a>
   <a href="{{ url_for('scan_station') }}">Scan Station</a>
   <a href="{{ url_for('report_history') }}">History Report</a>
   {% if current_role in ('admin', 'manager') %}

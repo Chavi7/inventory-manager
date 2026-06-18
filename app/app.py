@@ -18,6 +18,7 @@ from flask import (
 
 from db import get_db, init_db
 from labels import build_label_pdf
+from consumables import adjust_stock, StockError
 
 app = Flask(__name__)
 # In production set INVENTORY_SECRET_KEY via the environment / compose file.
@@ -839,6 +840,198 @@ def report_history_csv():
         headers={"Content-Disposition":
                  "attachment; filename=checkout_history.csv"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Consumables  (catalog, stock adjustments, history)
+# ---------------------------------------------------------------------------
+@app.route("/consumables")
+@login_required
+def consumables_list():
+    """Catalog of all consumable items. Students can view; managers adjust."""
+    q = request.args.get("q", "").strip()
+    cat_filter = request.args.get("category", "").strip()
+    show = request.args.get("show", "all")     # all | low
+
+    conn = get_db()
+    sql = """SELECT i.*, c.name AS category_name
+             FROM items i JOIN categories c ON c.id = i.category_id
+             WHERE i.kind = 'consumable'"""
+    params = []
+    if q:
+        sql += " AND (i.name LIKE ? OR i.item_code LIKE ?)"
+        params += [f"%{q}%", f"%{q}%"]
+    if cat_filter:
+        sql += " AND c.id = ?"
+        params.append(cat_filter)
+    if show == "low":
+        sql += (" AND i.low_stock_threshold IS NOT NULL"
+                " AND i.quantity_on_hand <= i.low_stock_threshold")
+    sql += " ORDER BY i.item_code"
+    items = conn.execute(sql, params).fetchall()
+    categories = conn.execute(
+        "SELECT * FROM categories ORDER BY name"
+    ).fetchall()
+    conn.close()
+    return render_template(
+        "consumables.html", items=items, categories=categories,
+        q=q, cat_filter=cat_filter, show=show,
+    )
+
+
+@app.route("/consumables/new", methods=["GET", "POST"])
+@role_required("admin", "manager")
+def consumable_new():
+    conn = get_db()
+    categories = conn.execute(
+        "SELECT * FROM categories ORDER BY name"
+    ).fetchall()
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        category_id = request.form.get("category_id", "")
+        location = request.form.get("location", "").strip()
+        notes = request.form.get("notes", "").strip()
+        qty_raw = request.form.get("quantity_on_hand", "0").strip()
+        thr_raw = request.form.get("low_stock_threshold", "").strip()
+        if not name or not category_id:
+            flash("Name and category are required.", "error")
+            conn.close()
+            return render_template("consumable_form.html",
+                                   categories=categories, item=None)
+        try:
+            qty = int(qty_raw) if qty_raw else 0
+            if qty < 0:
+                raise ValueError
+        except ValueError:
+            flash("Starting quantity must be a non-negative whole number.",
+                  "error")
+            conn.close()
+            return render_template("consumable_form.html",
+                                   categories=categories, item=None)
+        try:
+            thr = int(thr_raw) if thr_raw else None
+            if thr is not None and thr < 0:
+                raise ValueError
+        except ValueError:
+            flash("Low-stock threshold must be a non-negative whole number"
+                  " (or blank).", "error")
+            conn.close()
+            return render_template("consumable_form.html",
+                                   categories=categories, item=None)
+
+        code = generate_item_code(conn, category_id)
+        conn.execute(
+            """INSERT INTO items
+                  (item_code, name, kind, category_id, location, notes,
+                   quantity_on_hand, low_stock_threshold, created_at)
+               VALUES (?, ?, 'consumable', ?, ?, ?, ?, ?, ?)""",
+            (code, name, category_id, location, notes, qty, thr, _now()),
+        )
+        conn.commit()
+        conn.close()
+        flash(f"Consumable {code} added.", "success")
+        return redirect(url_for("consumables_list"))
+    conn.close()
+    return render_template("consumable_form.html",
+                           categories=categories, item=None)
+
+
+@app.route("/consumables/<int:item_id>")
+@login_required
+def consumable_detail(item_id):
+    conn = get_db()
+    item = conn.execute(
+        """SELECT i.*, c.name AS category_name
+           FROM items i JOIN categories c ON c.id = i.category_id
+           WHERE i.id = ? AND i.kind = 'consumable'""",
+        (item_id,),
+    ).fetchone()
+    if item is None:
+        conn.close()
+        flash("Consumable not found.", "error")
+        return redirect(url_for("consumables_list"))
+
+    history = conn.execute(
+        """SELECT a.*, u.username AS by_name,
+                  s.name AS student_name, s.employee_id
+           FROM stock_adjustments a
+           JOIN users u ON u.id = a.adjusted_by
+           LEFT JOIN students s ON s.id = a.student_id
+           WHERE a.item_id = ?
+           ORDER BY a.adjusted_at DESC""",
+        (item_id,),
+    ).fetchall()
+    students = conn.execute(
+        "SELECT id, employee_id, name FROM students WHERE active = 1"
+        " ORDER BY name"
+    ).fetchall()
+    conn.close()
+
+    is_low = (item["low_stock_threshold"] is not None and
+              (item["quantity_on_hand"] or 0) <= item["low_stock_threshold"])
+    return render_template(
+        "consumable_detail.html", item=item, history=history,
+        students=students, is_low=is_low,
+    )
+
+
+@app.route("/consumables/<int:item_id>/adjust", methods=["POST"])
+@role_required("admin", "manager")
+def consumable_adjust(item_id):
+    """Apply a stock adjustment via the consumables business logic."""
+    direction = request.form.get("direction", "")
+    amount_raw = request.form.get("amount", "").strip()
+    note = request.form.get("note", "")
+    student_raw = request.form.get("student_id", "").strip()
+
+    try:
+        amount = int(amount_raw)
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        flash("Amount must be a positive whole number.", "error")
+        return redirect(url_for("consumable_detail", item_id=item_id))
+
+    if direction == "dispense":
+        delta = -amount
+    elif direction == "restock":
+        delta = amount
+    else:
+        flash("Choose Restock or Dispense.", "error")
+        return redirect(url_for("consumable_detail", item_id=item_id))
+
+    student_id = int(student_raw) if student_raw.isdigit() else None
+
+    conn = get_db()
+    try:
+        new_qty = adjust_stock(
+            conn, item_id, delta, note,
+            adjusted_by_user_id=session["user_id"],
+            student_id=student_id,
+        )
+        flash(
+            f"{'Restocked' if delta > 0 else 'Dispensed'} {abs(delta)}. "
+            f"New on-hand: {new_qty}.",
+            "success",
+        )
+    except StockError as exc:
+        flash(str(exc), "error")
+    finally:
+        conn.close()
+    return redirect(url_for("consumable_detail", item_id=item_id))
+
+
+@app.route("/consumables/<int:item_id>/delete", methods=["POST"])
+@role_required("admin", "manager")
+def consumable_delete(item_id):
+    conn = get_db()
+    conn.execute("DELETE FROM stock_adjustments WHERE item_id = ?", (item_id,))
+    conn.execute("DELETE FROM items WHERE id = ? AND kind='consumable'",
+                 (item_id,))
+    conn.commit()
+    conn.close()
+    flash("Consumable deleted.", "success")
+    return redirect(url_for("consumables_list"))
 
 
 # ---------------------------------------------------------------------------

@@ -90,6 +90,22 @@ CREATE TABLE IF NOT EXISTS checkouts (
     due_at      TEXT NOT NULL,
     return_at   TEXT
 );
+
+-- One row per stock adjustment on a consumable item: a restock (positive delta)
+-- or a dispense (negative delta). Each row stores a snapshot of the resulting
+-- quantity so the history stays truthful even if items are later edited or
+-- deleted. student_id is optional: a dispense MAY record who received the
+-- supplies. note is required - every adjustment must say why.
+CREATE TABLE IF NOT EXISTS stock_adjustments (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id      INTEGER NOT NULL REFERENCES items(id),
+    delta        INTEGER NOT NULL,
+    new_quantity INTEGER NOT NULL,
+    student_id   INTEGER REFERENCES students(id),
+    note         TEXT NOT NULL,
+    adjusted_by  INTEGER NOT NULL REFERENCES users(id),
+    adjusted_at  TEXT NOT NULL
+);
 """
 
 
