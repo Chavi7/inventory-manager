@@ -31,6 +31,7 @@ checked out. (Sample data — all student names are fictional.)*
 - [Item management](#item-management)
 - [The scan station — check-out and return](#the-scan-station--check-out-and-return)
 - [Printing QR labels](#printing-qr-labels)
+- [Consumables](#consumables)
 - [Student roster](#student-roster)
 - [The check-out history report](#the-check-out-history-report)
 - [CSV format](#csv-format)
@@ -70,8 +71,12 @@ In plain terms, the app lets you:
 - Print a **check-out history report** showing who had what, and when.
 - Generate **printable QR labels** for assets — a PDF sheet you print, cut out,
   and stick on the gear, so every device carries the code the scan station reads.
+- Track **consumable supplies** — quantity-counted items like resistors, wire,
+  and solder — restocking and dispensing them, optionally recording which
+  student received a dispense, with a low-stock warning when a bin runs low.
 
-This version (Phase 1) handles assets. Consumable supplies are planned — see
+This version handles both individually tracked **assets** and quantity-tracked
+**consumables**. A couple of consumable conveniences are still planned — see
 [What's next](#whats-next).
 
 ---
@@ -180,6 +185,7 @@ inventory-manager/
 └── app/
     ├── app.py                # Flask application — routes, auth, checkout logic
     ├── db.py                 # SQLite schema, connection helper, first-run seed
+    ├── consumables.py        # consumable stock-adjustment rules (restock / dispense)
     ├── labels.py             # QR label PDF generation (qrcode + reportlab)
     ├── static/
     │   ├── css/
@@ -370,6 +376,49 @@ network.
 
 ---
 
+## Consumables
+
+Alongside assets, the app tracks **consumables** — supplies that are counted by
+quantity rather than checked out one at a time. Resistors, jumper wire, solder,
+and zip ties are consumables: you don't track each individual resistor, you
+track how many are on hand and watch the count fall as the class uses them.
+
+The **Consumables** page lists every consumable with its on-hand count and
+low-stock threshold. It can be searched by name or code and filtered by
+category, and a quick **Low stock only** filter narrows the list to bins that
+have hit their threshold. Each consumable gets the same auto-generated item code
+as an asset (for example `DT-CMP-007`), drawn from the same category counters.
+
+Managers and admins add a consumable from the **Add Consumable** form: a name, a
+category, an optional location and notes, a starting quantity, and an optional
+low-stock threshold. Each consumable has a detail page showing its current
+count, its threshold, and its full adjustment history.
+
+Stock changes happen on that detail page through the **Adjust Stock** form,
+which does one of two things:
+
+- **Restock** adds to the count — a new order arrives, you add what came in.
+- **Dispense** subtracts from the count — supplies handed out for a project.
+
+Every adjustment **requires a note** explaining it (`Restock from order #4521`,
+`Class soldering project`), so the history reads as a clear record rather than a
+column of bare numbers. A dispense can **optionally name the student** who
+received the supplies; that student then shows up in the adjustment history next
+to the change. (Student attribution is ignored on a restock, where it would not
+make sense.) Dispenses are **hard-blocked from going below zero** — the app
+refuses to dispense more than is on hand rather than letting the count go
+negative, so the recorded stock stays honest.
+
+When a consumable's on-hand count falls to or below its low-stock threshold, it
+is flagged on the Consumables list and surfaced in the **low-stock panel on the
+dashboard**. That panel was built in Phase 1 and sat empty until consumables
+gave it something to report; it now warns at a glance when a bin needs
+reordering. Consumables with no threshold set are never flagged.
+
+*(Screenshot: Consumables catalog and consumable detail — to be added.)*
+
+---
+
 ## Student roster
 
 The roster is the list of students who can have items checked out to them. It
@@ -482,12 +531,17 @@ the volume deletes the database — do not do that unless you mean to.
 
 ## What's intentionally NOT in this version
 
-To keep Phase 1 focused and honest about scope, the following are deliberately
-left out:
+To keep the app focused and honest about scope, the following are deliberately
+left out of this version:
 
-- **Consumable supplies.** This version tracks assets — uniquely identified
-  items. Quantity-tracked consumables (resistors, wire, solder) are planned but
-  not built. The database already has the columns for them; the screens do not.
+- **Consumable dispensing at the scan station.** Consumables are restocked and
+  dispensed from the consumable's detail page, not at the shared scan station —
+  the scan station handles assets only (check-out and return). Dispensing a
+  consumable by scanning a student badge is planned but not built; see
+  [What's next](#whats-next).
+- **Printable QR labels for consumables.** The Print Labels page generates
+  labels for assets only. Consumables carry an item code, but there is no
+  printable label sheet for them yet.
 - **A live connection to CLOCKIN.** The two apps share the `employee_id` key
   and the physical badge, but they do not talk to each other over the network.
   The roster is synced by CSV, by hand, on purpose — it keeps the two apps
@@ -509,9 +563,11 @@ many simultaneous schools or campuses.
 
 The module roadmap, in rough order:
 
-- **Phase 2 — Consumables.** Quantity-tracked supplies with a low-stock
-  threshold and a dashboard warning when stock runs low. The dashboard already
-  has the low-stock panel wired and waiting.
+- **Phase 2B — Consumables at the scan station.** Dispensing a consumable by
+  scanning a student badge at the shared station, the same way assets are
+  checked out today, plus printable QR labels for consumable bins so they can be
+  scanned there. The consumables catalog, stock adjustments, and low-stock
+  alerts shipped in Phase 2A; these are the conveniences still to come.
 - **Tighter CLOCKIN integration.** Possibly a direct roster sync, so importing
   a CSV by hand is no longer necessary — designed carefully so the two apps
   stay independently deployable.
