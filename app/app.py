@@ -466,7 +466,9 @@ def api_badge():
 @app.route("/api/item-lookup", methods=["POST"])
 @login_required
 def api_item_lookup():
-    """Resolve a scanned asset label (the QR encodes the bare item_code)."""
+    """Resolve a scanned item label (the QR encodes the bare item_code).
+    Works for both assets and consumables; the response carries a 'kind'
+    field so the scan station can branch on it."""
     code = (request.json or {}).get("payload", "").strip()
     conn = get_db()
     item = conn.execute(
@@ -478,10 +480,20 @@ def api_item_lookup():
     conn.close()
     if item is None:
         return jsonify(ok=False,
-                       message=f"No asset found with code '{code}'."), 200
-    return jsonify(ok=True, item_id=item["id"], item_code=item["item_code"],
-                   name=item["name"], status=item["status"],
-                   category_name=item["category_name"])
+                       message=f"No item found with code '{code}'."), 200
+    # Common fields for both kinds.
+    payload = dict(
+        ok=True, item_id=item["id"], item_code=item["item_code"],
+        name=item["name"], category_name=item["category_name"],
+        kind=item["kind"],
+    )
+    if item["kind"] == "consumable":
+        payload["quantity_on_hand"] = item["quantity_on_hand"] or 0
+        payload["low_stock_threshold"] = item["low_stock_threshold"]
+    else:
+        # Assets keep their existing status field unchanged.
+        payload["status"] = item["status"]
+    return jsonify(**payload)
 
 
 @app.route("/api/checkout", methods=["POST"])
@@ -571,6 +583,46 @@ def api_return():
     conn.commit()
     conn.close()
     return jsonify(ok=True, message=f"{co['item_code']} returned. Thanks!")
+
+
+@app.route("/api/consumable-dispense", methods=["POST"])
+@role_required("admin", "manager")
+def api_consumable_dispense():
+    """Dispense a consumable from the scan station. Thin wrapper over the
+    same adjust_stock() the detail-page Adjust Stock form uses, so the
+    required-note rule and the below-zero overdraw block are enforced in one
+    place. A student is optional; when present the dispense is attributed."""
+    body = request.json or {}
+    item_id = body.get("item_id")
+    note = body.get("note", "")
+    student_raw = body.get("student_id")
+
+    try:
+        amount = int(body.get("amount"))
+        if amount <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify(ok=False,
+                       message="Amount must be a positive whole number."), 200
+
+    try:
+        student_id = int(student_raw) if student_raw is not None else None
+    except (TypeError, ValueError):
+        student_id = None
+
+    conn = get_db()
+    try:
+        new_qty = adjust_stock(
+            conn, item_id, -amount, note,
+            adjusted_by_user_id=session["user_id"],
+            student_id=student_id,
+        )
+        return jsonify(ok=True, new_quantity=new_qty,
+                       message=f"Dispensed {amount}. {new_qty} on hand.")
+    except StockError as exc:
+        return jsonify(ok=False, message=str(exc)), 200
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -1040,14 +1092,19 @@ def consumable_delete(item_id):
 @app.route("/labels")
 @role_required("admin", "manager")
 def labels_page():
-    """Pick which assets to print QR labels for."""
+    """Pick which items to print QR labels for. Covers both assets and
+    consumables; the 'kind' filter narrows the list."""
     q = request.args.get("q", "").strip()
     cat_filter = request.args.get("category", "").strip()
+    kind = request.args.get("kind", "all").strip()
     conn = get_db()
-    sql = """SELECT i.id, i.item_code, i.name, c.name AS category_name
+    sql = """SELECT i.id, i.item_code, i.name, i.kind, c.name AS category_name
              FROM items i JOIN categories c ON c.id = i.category_id
-             WHERE i.kind = 'asset'"""
+             WHERE 1 = 1"""
     params = []
+    if kind in ("asset", "consumable"):
+        sql += " AND i.kind = ?"
+        params.append(kind)
     if q:
         sql += " AND (i.name LIKE ? OR i.item_code LIKE ?)"
         params += [f"%{q}%", f"%{q}%"]
@@ -1061,30 +1118,33 @@ def labels_page():
     ).fetchall()
     conn.close()
     return render_template("labels.html", items=items, categories=categories,
-                           q=q, cat_filter=cat_filter)
+                           q=q, cat_filter=cat_filter, kind=kind)
 
 
 @app.route("/labels/pdf", methods=["POST"])
 @role_required("admin", "manager")
 def labels_pdf():
-    """Generate a printable PDF of QR labels for the selected assets."""
+    """Generate a printable PDF of QR labels for the selected items
+    (assets and/or consumables)."""
     ids = request.form.getlist("item_ids")
     if not ids:
-        flash("Select at least one asset to print labels for.", "error")
+        flash("Select at least one item to print labels for.", "error")
         return redirect(url_for("labels_page"))
 
     conn = get_db()
     placeholders = ",".join("?" for _ in ids)
+    # Selection is already explicit by id (assets and/or consumables); the
+    # PDF builder is kind-agnostic, so no kind restriction here.
     rows = conn.execute(
         f"""SELECT item_code, name FROM items
-            WHERE id IN ({placeholders}) AND kind='asset'
+            WHERE id IN ({placeholders})
             ORDER BY item_code""",
         ids,
     ).fetchall()
     conn.close()
 
     if not rows:
-        flash("No matching assets found.", "error")
+        flash("No matching items found.", "error")
         return redirect(url_for("labels_page"))
 
     pdf_bytes = build_label_pdf([(r["item_code"], r["name"]) for r in rows])

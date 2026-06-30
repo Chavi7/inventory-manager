@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Print Labels{% endblock %}
 {% block content %}
-<h1 class="page-title">Print Asset Labels</h1>
+<h1 class="page-title">Print Item Labels</h1>
 <p class="scan-intro">
-  Select the assets you want QR labels for, then generate a printable PDF.
-  Each label shows the QR code (encoding the asset code), the asset code, and
-  the item name. Print on plain paper and cut along the guides. The scan
-  station reads these QR codes directly.
+  Select the items you want QR labels for &mdash; assets or consumables &mdash;
+  then generate a printable PDF. Each label shows the QR code (encoding the item
+  code), the item code, and the item name. Print on plain paper and cut along
+  the guides. The scan station reads these QR codes directly.
 </p>
 
 <form method="get" class="filter-bar">
@@ -20,6 +20,11 @@
         {{ c['name'] }}
       </option>
     {% endfor %}
+  </select>
+  <select name="kind">
+    <option value="all"        {% if kind == 'all'        %}selected{% endif %}>All kinds</option>
+    <option value="asset"      {% if kind == 'asset'      %}selected{% endif %}>Assets</option>
+    <option value="consumable" {% if kind == 'consumable' %}selected{% endif %}>Consumables</option>
   </select>
   <button type="submit" class="btn btn-primary">Filter</button>
   <a href="{{ url_for('labels_page') }}" class="btn btn-ghost">Reset</a>
@@ -43,7 +48,7 @@
     <table class="data-table">
       <thead>
         <tr><th style="width:40px;"></th><th>Code</th><th>Name</th>
-            <th>Category</th></tr>
+            <th>Kind</th><th>Category</th></tr>
       </thead>
       <tbody>
       {% for i in items %}
@@ -54,14 +59,21 @@
           </td>
           <td class="mono">{{ i['item_code'] }}</td>
           <td>{{ i['name'] }}</td>
+          <td>
+            {% if i['kind'] == 'consumable' %}
+              <span class="pill pill-in-repair">Consumable</span>
+            {% else %}
+              <span class="pill pill-available">Asset</span>
+            {% endif %}
+          </td>
           <td>{{ i['category_name'] }}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
     {% else %}
-    <p class="empty-note">No assets to print. Add some on the
-       <strong>Add Asset</strong> page first.</p>
+    <p class="empty-note">No items to print. Add some on the
+       <strong>Add Asset</strong> or <strong>Add Consumable</strong> page first.</p>
     {% endif %}
   </section>
 </form>

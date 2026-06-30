@@ -3,8 +3,10 @@
 {% block content %}
 <h1 class="page-title">Scan Station</h1>
 <p class="scan-intro">
-  Step 1 &mdash; scan a <strong>student badge</strong>.
-  Step 2 &mdash; scan an <strong>asset label</strong> to check it out or return it.
+  Scan an <strong>asset label</strong> to check it out or return it &mdash; scan
+  a <strong>student badge</strong> first for those. Or scan a
+  <strong>consumable label</strong> to dispense stock; a student badge is
+  optional there, and only records who received the supplies.
 </p>
 
 <div class="scan-layout">
@@ -33,9 +35,9 @@
     </div>
 
     <div class="scan-step">
-      <span class="scan-step-label">Asset</span>
+      <span class="scan-step-label">Item</span>
       <div id="item-box" class="scan-slot scan-slot-empty">
-        Waiting for asset scan&hellip;
+        Waiting for item scan&hellip;
       </div>
     </div>
 
@@ -54,6 +56,22 @@
         Return Item
       </button>
     </div>
+
+    {% if current_role in ('admin', 'manager') %}
+    <div id="dispense-area" class="scan-action-area" hidden>
+      <label for="dispense-amount">Amount to dispense</label>
+      <input type="number" id="dispense-amount" min="1" value="1">
+      <label for="dispense-note">Note</label>
+      <input type="text" id="dispense-note" maxlength="200" required
+             placeholder="e.g. 'Class soldering project'">
+      <span id="dispense-student-hint" class="field-hint">
+        No student scanned &mdash; dispense will not be attributed.
+      </span>
+      <button id="btn-dispense" class="btn btn-primary btn-block">
+        Dispense
+      </button>
+    </div>
+    {% endif %}
 
     <div id="scan-result" class="scan-result" hidden></div>
 
