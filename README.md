@@ -69,15 +69,18 @@ In plain terms, the app lets you:
 - Maintain a **student roster**, imported from a CLOCKIN CSV export or entered
   by hand.
 - Print a **check-out history report** showing who had what, and when.
-- Generate **printable QR labels** for assets — a PDF sheet you print, cut out,
-  and stick on the gear, so every device carries the code the scan station reads.
+- Generate **printable QR labels** for both assets and consumable bins — a PDF
+  sheet you print, cut out, and stick on the gear or the bin, so every item
+  carries the code the scan station reads.
 - Track **consumable supplies** — quantity-counted items like resistors, wire,
   and solder — restocking and dispensing them, optionally recording which
   student received a dispense, with a low-stock warning when a bin runs low.
+- **Dispense consumables at the scan station**, scanning a supply bin's label
+  the same way assets are checked out, with optional student attribution.
 
 This version handles both individually tracked **assets** and quantity-tracked
-**consumables**. A couple of consumable conveniences are still planned — see
-[What's next](#whats-next).
+**consumables**, at the item screens and at the shared scan station alike. See
+[What's next](#whats-next) for what's still on the roadmap.
 
 ---
 
@@ -355,16 +358,20 @@ the Asset slot.*
 
 ## Printing QR labels
 
-Every asset can be given a printed QR label, so the scan station can read it off
-the device. The **Print Labels** page (admin and managers) lists all assets;
-you search or filter to the ones you want, tick them, and click **Generate PDF**.
+Every item can be given a printed QR label, so the scan station can read it off
+the device or the supply bin. The **Print Labels** page (admin and managers)
+lists items; you search or filter to the ones you want, tick them, and click
+**Generate PDF**. A **kind** filter (alongside search and category) narrows the
+list to assets only, consumables only, or all items, and a Kind column marks
+each row so you can tell the two apart at a glance.
 
 The result is a print-ready PDF sheet — fifteen labels to a page on US Letter,
 laid out in a grid with light cut guides. Each label shows the QR code (which
-encodes the asset code, e.g. `DT-LAP-001`), the code itself in mono text, and
-the item name. Print it on plain paper, cut the labels out along the guides, and
-stick them on the gear. The QR codes are exactly what the scan station expects
-to read, so a freshly printed label works immediately at checkout.
+encodes the item code, e.g. `DT-LAP-001` for an asset or `DT-CMP-007` for a
+consumable bin), the code itself in mono text, and the item name. Print it on
+plain paper, cut the labels out along the guides, and stick them on the gear or
+the bin. The QR codes are exactly what the scan station expects to read, so a
+freshly printed label works immediately at checkout or dispense.
 
 Labels are generated server-side with the `qrcode` and `reportlab` libraries —
 the same toolchain CLOCKIN uses for its badges — so nothing leaves the local
@@ -409,13 +416,26 @@ make sense.) Dispenses are **hard-blocked from going below zero** — the app
 refuses to dispense more than is on hand rather than letting the count go
 negative, so the recorded stock stays honest.
 
+Consumables can also be dispensed at the **scan station**, which is faster for a
+busy supply counter. Scanning a consumable's QR label loads it into the station
+and shows its current on-hand count, then a manager enters an amount and a note
+and clicks **Dispense**. A student badge is **optional** here — scan one first
+and the dispense is attributed to that student, exactly as on the detail page;
+skip it and the dispense is recorded with no student. The on-hand count updates
+in place after each dispense, so handing the same supply to a line of students
+is quick. Every dispense goes through the same rules — required note, no going
+below zero — because the station calls the identical stock-adjustment logic the
+detail page uses. (Restocking still happens on the detail page; the station only
+dispenses.)
+
 When a consumable's on-hand count falls to or below its low-stock threshold, it
 is flagged on the Consumables list and surfaced in the **low-stock panel on the
 dashboard**. That panel was built in Phase 1 and sat empty until consumables
 gave it something to report; it now warns at a glance when a bin needs
 reordering. Consumables with no threshold set are never flagged.
 
-*(Screenshot: Consumables catalog and consumable detail — to be added.)*
+*(Screenshot: Consumables catalog, consumable detail, and the scan-station
+dispense panel — to be added.)*
 
 ---
 
@@ -534,14 +554,6 @@ the volume deletes the database — do not do that unless you mean to.
 To keep the app focused and honest about scope, the following are deliberately
 left out of this version:
 
-- **Consumable dispensing at the scan station.** Consumables are restocked and
-  dispensed from the consumable's detail page, not at the shared scan station —
-  the scan station handles assets only (check-out and return). Dispensing a
-  consumable by scanning a student badge is planned but not built; see
-  [What's next](#whats-next).
-- **Printable QR labels for consumables.** The Print Labels page generates
-  labels for assets only. Consumables carry an item code, but there is no
-  printable label sheet for them yet.
 - **A live connection to CLOCKIN.** The two apps share the `employee_id` key
   and the physical badge, but they do not talk to each other over the network.
   The roster is synced by CSV, by hand, on purpose — it keeps the two apps
@@ -563,14 +575,13 @@ many simultaneous schools or campuses.
 
 The module roadmap, in rough order:
 
-- **Phase 2B — Consumables at the scan station.** Dispensing a consumable by
-  scanning a student badge at the shared station, the same way assets are
-  checked out today, plus printable QR labels for consumable bins so they can be
-  scanned there. The consumables catalog, stock adjustments, and low-stock
-  alerts shipped in Phase 2A; these are the conveniences still to come.
 - **Tighter CLOCKIN integration.** Possibly a direct roster sync, so importing
   a CSV by hand is no longer necessary — designed carefully so the two apps
   stay independently deployable.
+
+The consumables work that was on this list — the catalog, stock adjustments, and
+low-stock alerts (Phase 2A), then scan-station dispense and consumable QR labels
+(Phase 2B) — has now shipped and is documented above.
 
 ---
 
