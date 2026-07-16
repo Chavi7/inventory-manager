@@ -583,18 +583,16 @@ many simultaneous schools or campuses.
 
 ## What's next
 
-The module roadmap, in rough order:
+The items that were on this roadmap have all shipped:
 
-- **Tighter CLOCKIN integration.** Possibly a direct roster sync, so importing
-  a CSV by hand is no longer necessary — designed carefully so the two apps
-  stay independently deployable.
+- **Tighter CLOCKIN integration** — direct roster sync from CLOCKIN's API, one
+  click on the Roster page, no CSV needed. Both apps stay independently
+  deployable.
+- **Consumables (Phase 2A)** — catalog, stock adjustments (restock/dispense),
+  low-stock alerts on the dashboard.
+- **Consumables (Phase 2B)** — scan-station dispense and consumable QR labels.
 
-The consumables work that was on this list — the catalog, stock adjustments, and
-low-stock alerts (Phase 2A), then scan-station dispense and consumable QR labels
-(Phase 2B) — has now shipped and is documented above. The direct CLOCKIN roster
-sync (live API pull instead of CSV import) has also shipped.
-
-With this, the roadmap as written is complete. New ideas tracked as GitHub
+With this, the roadmap as written is complete. New ideas are tracked as GitHub
 issues going forward.
 
 ---
