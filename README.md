@@ -461,6 +461,10 @@ Docker network with a shared `CLOCKIN_API_KEY` (see the compose file). The sync
 adds new students, updates existing ones, and deactivates anyone who's no longer
 in CLOCKIN's roster.
 
+![Roster after CLOCKIN sync](docs/roster-sync.png)
+
+*The Roster page after a direct CLOCKIN sync — three students imported, no CSV needed.*
+
 ---
 
 ## The check-out history report
