@@ -25,6 +25,17 @@
     <span class="mono">section</span>. Existing students are updated,
     not duplicated.
   </p>
+
+  <hr class="form-divider">
+  <h3 class="panel-subtitle">Or sync directly from CLOCKIN</h3>
+  <form method="post" action="{{ url_for('roster_sync') }}" class="inline-form">
+    <p class="field-hint" style="margin-top:0">
+      Pull the roster live from the CLOCKIN server — no CSV needed.
+      Requires CLOCKIN_URL and CLOCKIN_API_KEY to be configured on this
+      server. Students no longer in CLOCKIN are deactivated automatically.
+    </p>
+    <button type="submit" class="btn btn-primary">Sync from CLOCKIN</button>
+  </form>
 </section>
 
 <section class="panel panel-form">

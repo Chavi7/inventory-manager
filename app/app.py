@@ -7,6 +7,9 @@ import csv
 import io
 import json
 import functools
+import urllib.request
+import urllib.error
+import ssl
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -807,6 +810,122 @@ def roster_import():
               "success")
     except Exception as exc:
         flash(f"Import failed: {exc}", "error")
+    return redirect(url_for("roster"))
+
+
+@app.route("/roster/sync", methods=["POST"])
+@role_required("admin")
+def roster_sync():
+    """Pull the roster directly from CLOCKIN's API instead of a CSV file.
+
+    Requires CLOCKIN_URL and CLOCKIN_API_KEY environment variables.
+    If either is missing, the sync is disabled with a clear message.
+    Calls CLOCKIN's /api/roster endpoint and upserts students into the
+    local students table — same logic as the CSV import, same upsert
+    behaviour (existing employee_ids are updated, new ones added).
+    """
+    clockin_url = os.environ.get("CLOCKIN_URL", "").rstrip("/")
+    api_key = os.environ.get("CLOCKIN_API_KEY", "")
+
+    if not clockin_url or not api_key:
+        flash(
+            "CLOCKIN sync is not configured. Set CLOCKIN_URL and "
+            "CLOCKIN_API_KEY environment variables on this server.",
+            "error",
+        )
+        return redirect(url_for("roster"))
+
+    api_url = f"{clockin_url}/api/roster?key={api_key}"
+
+    try:
+        # Allow self-signed / internal certs on the classroom LAN.
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        req = urllib.request.Request(api_url)
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 401:
+            flash("CLOCKIN sync failed: API key rejected.", "error")
+        elif exc.code == 503:
+            flash(
+                "CLOCKIN sync failed: the CLOCKIN server has its API "
+                "disabled (CLOCKIN_API_KEY not set there).",
+                "error",
+            )
+        else:
+            flash(f"CLOCKIN sync failed: HTTP {exc.code}.", "error")
+        return redirect(url_for("roster"))
+    except (urllib.error.URLError, OSError) as exc:
+        flash(
+            f"Could not reach CLOCKIN at {clockin_url}. "
+            "Is the CLOCKIN container running?",
+            "error",
+        )
+        return redirect(url_for("roster"))
+    except json.JSONDecodeError:
+        flash("CLOCKIN returned an unrecognised response.", "error")
+        return redirect(url_for("roster"))
+
+    employees = body.get("employees", [])
+    if not employees:
+        flash("CLOCKIN roster is empty — nothing to import.", "warning")
+        return redirect(url_for("roster"))
+
+    conn = get_db()
+    added = updated = deactivated = 0
+    incoming_ids = set()
+
+    for emp in employees:
+        emp_id = (emp.get("employee_id") or "").strip()
+        if not emp_id:
+            continue
+        incoming_ids.add(emp_id)
+        name = (emp.get("name") or "").strip() or emp_id
+        sid = (emp.get("student_id") or "").strip()
+        active = 1 if emp.get("active", True) else 0
+
+        existing = conn.execute(
+            "SELECT id FROM students WHERE employee_id = ?", (emp_id,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE students SET name=?, student_id=?, active=?"
+                " WHERE employee_id=?",
+                (name, sid, active, emp_id),
+            )
+            updated += 1
+        else:
+            conn.execute(
+                """INSERT INTO students
+                      (employee_id, name, student_id, active, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (emp_id, name, sid, active, _now()),
+            )
+            added += 1
+
+    # Deactivate students who are no longer in the CLOCKIN roster.
+    # Only touch students that exist in our DB but were not in the API response.
+    if incoming_ids:
+        existing_all = conn.execute(
+            "SELECT employee_id FROM students"
+        ).fetchall()
+        for row in existing_all:
+            if row["employee_id"] not in incoming_ids:
+                conn.execute(
+                    "UPDATE students SET active = 0 WHERE employee_id = ?",
+                    (row["employee_id"],),
+                )
+                deactivated += 1
+
+    conn.commit()
+    conn.close()
+
+    parts = [f"{added} added", f"{updated} updated"]
+    if deactivated:
+        parts.append(f"{deactivated} deactivated (no longer in CLOCKIN)")
+    flash(f"Roster sync complete: {', '.join(parts)}.", "success")
     return redirect(url_for("roster"))
 
 
