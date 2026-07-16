@@ -39,7 +39,7 @@ checked out. (Sample data — all student names are fictional.)*
 - [Backup](#backup)
 - [Docker reference commands](#docker-reference-commands)
 - [What's intentionally NOT in this version](#whats-intentionally-not-in-this-version)
-- [What's next](#whats-next)
+- [What shipped](#what-shipped)
 
 ---
 
@@ -581,7 +581,7 @@ many simultaneous schools or campuses.
 
 ---
 
-## What's next
+## What shipped
 
 The items that were on this roadmap have all shipped:
 
