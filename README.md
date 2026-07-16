@@ -455,6 +455,12 @@ adding students one at a time on the Roster page. A CSV import updates students
 who already exist rather than duplicating them, so re-importing an updated
 roster is safe.
 
+A third way — **Sync from CLOCKIN** — pulls the roster directly from the
+CLOCKIN API with one click. This requires the two containers to be on the same
+Docker network with a shared `CLOCKIN_API_KEY` (see the compose file). The sync
+adds new students, updates existing ones, and deactivates anyone who's no longer
+in CLOCKIN's roster.
+
 ---
 
 ## The check-out history report
@@ -581,7 +587,11 @@ The module roadmap, in rough order:
 
 The consumables work that was on this list — the catalog, stock adjustments, and
 low-stock alerts (Phase 2A), then scan-station dispense and consumable QR labels
-(Phase 2B) — has now shipped and is documented above.
+(Phase 2B) — has now shipped and is documented above. The direct CLOCKIN roster
+sync (live API pull instead of CSV import) has also shipped.
+
+With this, the roadmap as written is complete. New ideas tracked as GitHub
+issues going forward.
 
 ---
 
