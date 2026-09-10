@@ -835,7 +835,10 @@ def roster_sync():
         )
         return redirect(url_for("roster"))
 
-    api_url = f"{clockin_url}/api/roster?key={api_key}"
+    # Auth is sent via the Authorization header, never as a query param —
+    # gunicorn access logs record the full request line including query
+    # strings, so a ?key= would leak the secret into every log line.
+    api_url = f"{clockin_url}/api/roster"
 
     try:
         # Allow self-signed / internal certs on the classroom LAN.
@@ -843,6 +846,7 @@ def roster_sync():
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         req = urllib.request.Request(api_url)
+        req.add_header("Authorization", f"Bearer {api_key}")
         with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
             body = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:

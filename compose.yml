@@ -5,18 +5,22 @@ services:
     build: .
     container_name: inventory-manager
     ports:
-      # host:container — change the host port if 5001 is in use.
-      - "5001:5000"
+      # host:container — bound to localhost only; this app handles student PII
+      # and must never be reachable from the LAN. Change the host port if
+      # 5001 is in use, but keep the 127.0.0.1 prefix.
+      - "127.0.0.1:5001:5000"
     volumes:
       # Persists the SQLite database across container rebuilds.
       - inventory-data:/data
     environment:
-      # IMPORTANT: set a long random value before deploying.
-      - INVENTORY_SECRET_KEY=change-this-to-a-long-random-string
+      # INVENTORY_SECRET_KEY is pulled from .env — never commit the real value.
+      - INVENTORY_SECRET_KEY=${INVENTORY_SECRET_KEY}
       - INVENTORY_DB_PATH=/data/inventory.db
       # CLOCKIN roster sync (optional — leave blank to keep CSV-only import).
       - CLOCKIN_URL=http://clockin:5000
-      - CLOCKIN_API_KEY=change-this-to-match-the-clockin-key
+      # Shared secret for the CLOCKIN roster sync API — must match
+      # CLOCKIN_API_KEY set on the clockin container. Pulled from .env.
+      - CLOCKIN_API_KEY=${CLOCKIN_API_KEY}
     restart: unless-stopped
     networks:
       - ctec-net
