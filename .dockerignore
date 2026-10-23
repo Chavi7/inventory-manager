@@ -21,6 +21,13 @@ app/data/
 # Docs / screenshots — not needed inside the running container
 docs/
 
+# Tests and CI tooling — not needed at runtime
+tests/
+pytest.ini
+requirements-dev.txt
+README.md
+LICENSE
+
 # Editor / OS
 .DS_Store
 .idea/

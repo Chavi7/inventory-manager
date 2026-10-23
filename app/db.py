@@ -4,7 +4,6 @@ SQLite schema, connection helper, and first-run seeding.
 """
 import sqlite3
 import os
-from datetime import datetime
 
 # Where the SQLite database lives.
 #
@@ -127,8 +126,6 @@ def _seed(conn):
     password ever exists in the codebase. The app starts as a clean,
     production-ready slate.
     """
-    now = datetime.now().isoformat(timespec="seconds")
-
     # --- Categories -------------------------------------------------------
     # These are sensible starting categories, not credentials, so seeding
     # them is fine. Admins can edit or add more later.

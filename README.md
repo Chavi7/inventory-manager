@@ -237,6 +237,22 @@ Stop the app with `Ctrl+C`. The development server prints a "do not use in
 production" warning — that is expected and fine for source testing; the Docker
 deployment uses gunicorn as the production server.
 
+### Run the tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The suite covers first-run setup, login and role enforcement, item codes and
+asset CRUD, the category checkout limit, the whole scan-station cycle (badge
+resolution → checkout → return, plus consumable dispense and overdraw), the
+stock-adjustment rules, and the QR/label PDF and history-report output. It runs
+against a temporary database, so it never touches `app/data/inventory.db`.
+
+CI runs the same suite plus `pyflakes` on every pull request and every push to
+`main` (`.github/workflows/ci.yml`).
+
 ---
 
 ## Roles and accounts
@@ -506,6 +522,10 @@ are updated in place; new rows are added.
 - `INVENTORY_SECRET_KEY` signs login sessions. On any real deployment, set it
   to a long random value. The placeholder in `compose.yml` must be
   changed before deploying.
+- **The app refuses to start** if `INVENTORY_SECRET_KEY` is set but empty, is
+  the built-in development placeholder, or is shorter than 16 characters. Docker
+  turns an unset variable into an empty string, which used to leave the app
+  running with `/login` returning 500 — it now fails loudly at boot instead.
 - **No default credentials.** The app ships with no admin account; the first
   visitor creates the admin via the First-run setup screen. This means there's
   no known password sitting in the public repo or in a deployed instance.
