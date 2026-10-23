@@ -17,3 +17,6 @@ data/
 
 # Secrets
 .env
+
+# Test tooling
+.pytest_cache/

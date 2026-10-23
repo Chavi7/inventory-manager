@@ -7,6 +7,8 @@ import csv
 import io
 import json
 import functools
+import os
+import sys
 import urllib.request
 import urllib.error
 import ssl
@@ -24,9 +26,71 @@ from labels import build_label_pdf
 from consumables import adjust_stock, StockError
 
 app = Flask(__name__)
-# In production set INVENTORY_SECRET_KEY via the environment / compose file.
-import os
-app.secret_key = os.environ.get("INVENTORY_SECRET_KEY", "dev-only-change-me")
+
+# ---------------------------------------------------------------------------
+# SESSION SECRET — fail fast instead of failing silently
+# ---------------------------------------------------------------------------
+# compose.yml passes `INVENTORY_SECRET_KEY=${INVENTORY_SECRET_KEY}` straight
+# through, so an unset variable arrives in the container as an *empty string*,
+# not as a missing one. Flask then has secret_key == "", which makes /setup and
+# /login raise "The session is unavailable because no secret key was set" — 500
+# on every session-touching route — while the app still serves pages that don't
+# touch the session. The container looks healthy and nobody can log in.
+SECRET_ENV = "INVENTORY_SECRET_KEY"
+DEV_SECRET = "dev-only-change-me"
+MIN_SECRET_LENGTH = 16
+
+
+def _resolve_secret():
+    """Return the session signing key, or exit with a readable explanation."""
+    if SECRET_ENV not in os.environ:
+        # `python3 app.py` from source with nothing configured — the documented
+        # zero-setup path. Allowed, but never silent about what it means.
+        print(
+            f"WARNING: {SECRET_ENV} is not set. Using the built-in development "
+            "secret: sessions are not secure and will not survive a restart.\n"
+            "         Set it to a long random value before deploying.\n"
+            '         python3 -c "import secrets; print(secrets.token_hex(32))"',
+            file=sys.stderr,
+        )
+        return DEV_SECRET
+
+    value = os.environ[SECRET_ENV].strip()
+
+    if not value:
+        sys.exit(
+            f"\nInventory Manager refuses to start: {SECRET_ENV} is set but EMPTY.\n"
+            "\n"
+            "That is what a Docker deploy looks like when the variable was never\n"
+            "filled in — compose passes it through as an empty string. Starting\n"
+            "anyway would leave /login and /setup returning 500, so this fails\n"
+            "loudly instead.\n"
+            "\n"
+            f"Fix: set {SECRET_ENV} to a long random value, e.g.\n"
+            '  python3 -c "import secrets; print(secrets.token_hex(32))"\n'
+            "or remove the variable from the container environment.\n"
+        )
+
+    if value == DEV_SECRET:
+        sys.exit(
+            f"\nInventory Manager refuses to start: {SECRET_ENV} is the built-in\n"
+            "development placeholder, which is public in this repository. Session\n"
+            "cookies signed with it can be forged by anyone who has read the source.\n"
+            f"Set {SECRET_ENV} to a long random value.\n"
+        )
+
+    if len(value) < MIN_SECRET_LENGTH:
+        sys.exit(
+            f"\nInventory Manager refuses to start: {SECRET_ENV} is only "
+            f"{len(value)} characters.\n"
+            f"Session signing keys need at least {MIN_SECRET_LENGTH}. Generate one with\n"
+            '  python3 -c "import secrets; print(secrets.token_hex(32))"\n'
+        )
+
+    return value
+
+
+app.secret_key = _resolve_secret()
 
 # Ensure the database exists and is seeded before the first request.
 init_db()
@@ -861,7 +925,7 @@ def roster_sync():
         else:
             flash(f"CLOCKIN sync failed: HTTP {exc.code}.", "error")
         return redirect(url_for("roster"))
-    except (urllib.error.URLError, OSError) as exc:
+    except (urllib.error.URLError, OSError):
         flash(
             f"Could not reach CLOCKIN at {clockin_url}. "
             "Is the CLOCKIN container running?",
