@@ -22,5 +22,9 @@ EXPOSE 5000
 
 # Gunicorn serves the Flask app. One worker keeps SQLite access simple
 # and is plenty for a single classroom.
+#
+# --preload imports app:app in the master before forking, so a misconfigured
+# secret (see _resolve_secret in app/app.py) exits the container instead of
+# leaving a worker to die quietly while the container still looks "up".
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", \
-     "--timeout", "60", "app:app"]
+     "--timeout", "60", "--preload", "app:app"]
