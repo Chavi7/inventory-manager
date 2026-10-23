@@ -80,7 +80,7 @@ In plain terms, the app lets you:
 
 This version handles both individually tracked **assets** and quantity-tracked
 **consumables**, at the item screens and at the shared scan station alike. See
-[What's next](#whats-next) for what's still on the roadmap.
+[What shipped](#what-shipped) for what's still on the roadmap.
 
 ---
 
@@ -98,12 +98,18 @@ It builds the app straight from this GitHub repository.
 7. Before deploying, open the **Environment variables** section (or edit the
    compose file in the editor) and set a real value for
    `INVENTORY_SECRET_KEY` — a long random string. Do not leave the placeholder.
-8. Click **Deploy the stack**.
+8. Add `INVENTORY_BIND` = `0.0.0.0` so a classroom PC can reach the scan
+   station. The container binds to `127.0.0.1` by default, which only lets the
+   server itself connect.
+9. Click **Deploy the stack**.
 
-When it finishes, the app is reachable on the server at port **5001**
+When it finishes, the app is reachable at port **5001**
 (for example `http://your-server-ip:5001`). Port 5001 is chosen so it does not
-collide with CLOCKIN; change the host port in the compose file if 5001 is
+collide with CLOCKIN; change the host port with `INVENTORY_PORT` if 5001 is
 already in use.
+
+The full operating checklist — deploy, daily flow, backups, and what to do when
+it breaks mid-period — is in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 On the very first visit, the app loads the **First-run setup screen** — there
 is no default admin account. You create the admin (username and password) right
@@ -132,7 +138,10 @@ The image is public — no GHCR login is needed on the server.
    - **value:** a long random string. On a Mac or Linux machine,
      `python3 -c "import secrets; print(secrets.token_hex(32))"`
      prints a good one.
-6. Click **Deploy the stack**.
+6. Add `INVENTORY_BIND` = `0.0.0.0` under **Environment variables** so a
+   classroom PC can reach the scan station (the default `127.0.0.1` only allows
+   the server itself).
+7. Click **Deploy the stack**.
 
 The app is reachable at host port **5001** (e.g. `http://your-server-ip:5001`).
 
@@ -584,10 +593,11 @@ the volume deletes the database — do not do that unless you mean to.
 To keep the app focused and honest about scope, the following are deliberately
 left out of this version:
 
-- **A live connection to CLOCKIN.** The two apps share the `employee_id` key
-  and the physical badge, but they do not talk to each other over the network.
-  The roster is synced by CSV, by hand, on purpose — it keeps the two apps
-  fully independent.
+- **A user-facing sync UI for anything other than CLOCKIN.** The roster can be
+  pulled from CLOCKIN's `/api/roster` with one click, but that is the only
+  network integration: assets, consumables and checkouts never leave this app's
+  own database, and the two containers each stay independently deployable. If
+  `CLOCKIN_API_KEY` is not set, roster sync falls back to CSV import.
 - **Email or notifications.** Overdue items are flagged in the app's dashboard;
   the app does not send messages.
 - **Public-internet hardening.** See [Security notes](#security-notes).
