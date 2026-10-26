@@ -5,14 +5,20 @@ services:
     build: .
     container_name: inventory-manager
     ports:
-      # host:container — bound to localhost only; this app handles student PII
-      # and must never be reachable from the LAN. Change the host port if
-      # 5001 is in use, but keep the 127.0.0.1 prefix.
-      - "127.0.0.1:5001:5000"
+      # host:container. Defaults to localhost only.
+      # The scan station runs on a classroom PC, so on the lab server either set
+      # INVENTORY_BIND=0.0.0.0 (plain HTTP, USB scanner only) or keep localhost
+      # and put a reverse proxy in front — the browser camera needs HTTPS from
+      # a non-localhost origin. See docs/RUNBOOK.md.
+      - "${INVENTORY_BIND:-127.0.0.1}:${INVENTORY_PORT:-5001}:5000"
     volumes:
       # Persists the SQLite database across container rebuilds.
       - inventory-data:/data
     environment:
+      # Container clock. Without this the container runs in UTC, so checkout and
+      # dispense times an admin reads or exports are shifted (4 hours off in
+      # EDT) and a late-evening checkout lands on the next day's date.
+      - TZ=${TZ:-America/New_York}
       # INVENTORY_SECRET_KEY is pulled from .env — never commit the real value.
       - INVENTORY_SECRET_KEY=${INVENTORY_SECRET_KEY}
       - INVENTORY_DB_PATH=/data/inventory.db

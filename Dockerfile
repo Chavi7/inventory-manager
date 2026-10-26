@@ -20,6 +20,12 @@ ENV INVENTORY_DB_PATH=/data/inventory.db
 WORKDIR /srv/inventory/app
 EXPOSE 5000
 
+# Health check so Portainer can show "healthy" instead of just "running".
+# Hits "/", which redirects to /setup before the first admin exists and then to
+# the dashboard — both are 200 after the redirect, so it works at any stage.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3).read()" || exit 1
+
 # Gunicorn serves the Flask app. One worker keeps SQLite access simple
 # and is plenty for a single classroom.
 #

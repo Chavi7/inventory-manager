@@ -25,11 +25,14 @@ services:
     restart: unless-stopped
     pull_policy: always
     ports:
-      # host:container — bound to localhost only; this app handles student PII
-      # and must never be reachable from the LAN directly. Put a reverse
-      # proxy in front if remote access is needed.
-      - "127.0.0.1:5001:5000"
+      # host:container. Localhost by default — set INVENTORY_BIND=0.0.0.0 on
+      # the lab server so classroom PCs can reach the scan station, or keep
+      # localhost and put a reverse proxy in front (the browser-camera scan
+      # station needs HTTPS off localhost). See docs/RUNBOOK.md.
+      - "${INVENTORY_BIND:-127.0.0.1}:${INVENTORY_PORT:-5001}:5000"
     environment:
+      # Container clock — set to UTC and every recorded time is shifted.
+      - TZ=${TZ:-America/New_York}
       - INVENTORY_SECRET_KEY=${INVENTORY_SECRET_KEY}
       - INVENTORY_DB_PATH=/data/inventory.db
       # CLOCKIN roster sync (optional — leave blank to keep CSV-only import).
