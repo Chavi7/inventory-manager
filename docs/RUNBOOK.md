@@ -12,6 +12,13 @@ the container is the whole application state.
 
 ## First deploy
 
+**Step 0 — create the shared network, once, before either app.** Both stacks
+expect an external Docker network called `ctec-net`, so a stack deployed
+without it fails with "network ctec-net declared as external, but could not be
+found" — and the CLOCKIN roster sync has nothing to talk to. In Portainer:
+**Networks → Add network**, name `ctec-net`, driver `bridge`. From a shell:
+`docker network create ctec-net`.
+
 1. In Portainer: **Stacks → Add stack**, build method **Repository**,
    `https://github.com/Chavi7/inventory-manager`, ref `refs/heads/main`, compose
    `compose.yml`.
@@ -21,6 +28,7 @@ the container is the whole application state.
    |---|---|
    | `INVENTORY_SECRET_KEY` | a long random string — `python3 -c "import secrets; print(secrets.token_hex(32))"` |
    | `INVENTORY_BIND` | `0.0.0.0` so classroom PCs can reach the scan station |
+   | `TZ` | your timezone, e.g. `America/New_York` — otherwise the container runs in UTC and every recorded time is hours off |
 
    Optional, for the one-click roster sync from CLOCKIN: `CLOCKIN_API_KEY`
    (must match the value on the CLOCKIN container) — both containers must be on
@@ -30,6 +38,17 @@ the container is the whole application state.
    the placeholder.
 3. Deploy, open `/` — a fresh database sends you to `/setup` to create the
    teacher (admin) account. There are no default credentials.
+
+## Check the deployment actually works
+
+```bash
+./scripts/smoke.sh http://<lab-server-ip>:5001
+```
+
+Read-only, takes a second, exits 0 if healthy. It checks the app answers, the
+login and setup pages don't 500, and the scan station and badge API require a
+login — the routes a blank secret used to break silently. Run it right after
+deploying, and again if a period starts weird.
 
 ## The URL students use
 

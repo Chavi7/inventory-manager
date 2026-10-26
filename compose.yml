@@ -15,6 +15,10 @@ services:
       # Persists the SQLite database across container rebuilds.
       - inventory-data:/data
     environment:
+      # Container clock. Without this the container runs in UTC, so checkout and
+      # dispense times an admin reads or exports are shifted (4 hours off in
+      # EDT) and a late-evening checkout lands on the next day's date.
+      - TZ=${TZ:-America/New_York}
       # INVENTORY_SECRET_KEY is pulled from .env — never commit the real value.
       - INVENTORY_SECRET_KEY=${INVENTORY_SECRET_KEY}
       - INVENTORY_DB_PATH=/data/inventory.db
